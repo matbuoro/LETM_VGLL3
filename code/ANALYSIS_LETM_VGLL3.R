@@ -80,7 +80,7 @@ dataToJags$X.scaled <- NULL
 data_empty <- list(N=dataToJags$N, X= dataToJags$X, n=dataToJags$n, g=dataToJags$g, sex=dataToJags$sex)
 
 # MODEL ####
-source("code/MODEL_LETM_VGL3_v4.R")
+source("code/MODEL_LETM_VGLL3.R")
 
 # ANALYSIS ####
 ## Parameters ####
@@ -147,7 +147,7 @@ samples <- jags.parallel(data=dataToJags,
                          n.cluster= 2
 ) # seep every X iterations
 
-save(samples, file="results/vgll3_scorff_jags-v4.RData")
+save(samples, file="results/RESULTS_vgll3_scorff.RData")
 
 write.csv2(samples$BUGSoutput$summary, file="results/Summary.csv")
 
@@ -166,7 +166,7 @@ write.csv2(samples$BUGSoutput$summary, file="results/Summary.csv")
 
 ## Trace and posterior density ####
 MCMCtrace(object = samples,
-          filename="MCMC_jags_v4.pdf",
+          filename="MCMC_jags_all.pdf",
           wd = "results/",
           pdf = TRUE, # no export to PDF
           ind = TRUE, # separate density lines per chain
@@ -177,7 +177,7 @@ MCMCtrace(object = samples,
 )
 
 # Plots ####
-pdf(file="results/Caterplots_jags_v4.pdf")
+pdf(file="results/Caterplots_LETM_VGLL3.pdf")
 
 ## 
 #X.c <- X -mean(X)
