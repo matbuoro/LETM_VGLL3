@@ -1,4 +1,4 @@
-Genetic and environmental determinants of age at maturation in an Atlantic salmon population
+# Genetic and environmental determinants of age at maturation in an Atlantic salmon population
 
 Contributors: Marie Nevoux, Guillaume Evanno, Etienne Rivot, Mathieu Buoro, Etienne Prévost, Cécile Tréhin, et al
 
