@@ -96,8 +96,10 @@ if(nimble){
 if(jags){
   load("results/RESULTS_vgll3_scorff.RData")
   mcmc <- samples$BUGSoutput$sims.matrix
-  mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
-  mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
+  #mu_alphaMale <- mcmc[,"mu_theta[1,1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
+  #mu_alphaFemale <- mcmc[,"mu_theta[1,2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
+  mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1]
+  mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,2]
   alpha1m <- mcmc[,"alpha[1,1]"]
   alpha2m <- mcmc[,"alpha[2,1]"]
   alpha3m <- mcmc[,"alpha[3,1]"]
@@ -106,7 +108,7 @@ if(jags){
   alpha2f <- mcmc[,"alpha[2,2]"]
   alpha3f <- mcmc[,"alpha[3,2]"]
 
-  theta <- array(,dim=c(length(mu_alphaFemale),3,2))
+  theta <- array(,dim=c(nrow(mu_alphaFemale),3,2))
   theta[,1,1] <- mu_alphaMale + alpha1m
   theta[,2,1] <- mu_alphaMale + alpha2m
   theta[,3,1] <- mu_alphaMale + alpha3m
