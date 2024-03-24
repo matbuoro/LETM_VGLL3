@@ -94,7 +94,7 @@ if(nimble){
 }
 
 if(jags){
-  load("results/vgll3_scorff_jags-v5.RData")
+  load("results/RESULTS_vgll3_scorff.RData")
   mcmc <- samples$BUGSoutput$sims.matrix
   mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
   mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
@@ -130,7 +130,7 @@ if(jags){
 
 
 
-pdf("results/VGLL3_Scorff_jags-v5.pdf")
+pdf("results/FIGURES_VGLL3_Scorff.pdf")
 
 par(mfrow=c(2,2))
 # male

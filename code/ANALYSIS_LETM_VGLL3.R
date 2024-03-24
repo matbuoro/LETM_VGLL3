@@ -8,7 +8,7 @@ rm(list=ls())   # Clear memory
 # install.packages("nimble", repos = "http://r-nimble.org", type = "source")
 # the 'type = "source"' is unnecessary for Linx
 require(R2jags)
-library(igraph)
+#library(igraph)
 library(MCMCvis)
 library(writexl)
 
@@ -80,6 +80,7 @@ dataToJags$X.scaled <- NULL
 data_empty <- list(N=dataToJags$N, X= dataToJags$X, n=dataToJags$n, g=dataToJags$g, sex=dataToJags$sex)
 
 # MODEL ####
+source("code/MODEL_LETM_VGLL3.R")
 source("code/MODEL_LETM_VGLL3.R")
 
 # ANALYSIS ####

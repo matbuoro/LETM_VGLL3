@@ -34,8 +34,8 @@ LETM<-function(){
     ## Threshold
     theta[i]~dnorm(mu[i,2], 1/sigma2_res[g[i],sex[i]])
     #mu[i,2] <- alpha[g[i],sex[i]]
-    #mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
-    mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
+    mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
+    #mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
     
     ## Proximate cue (eta)
     lower[i] <- ifelse(Y[i]==1,theta[i],-100)
