@@ -1,5 +1,12 @@
 LETM<-function(){
   
+# Y: Maturation state; 1 if mature (1SW), 0 otherwise (MSW)
+# X: observable cue (growth)
+# eta: individual Proximate cue
+# theta: individual thresholds
+# a: genotypic values
+# k: scaled dominance deviation
+
   for (s in 1:2){
     for (gen in 1:3){
       mu_X[gen,s] ~ dnorm(0,0.001)
@@ -15,45 +22,36 @@ LETM<-function(){
     
     ## Environmental cue (X):
     X[i]~dnorm(mu_X[g[i],sex[i]],  1/sigma2_X[g[i],sex[i]]) # Growth distributions
-    #X[i]~dnorm(mu_X[g[i], sex[i]], tau_X[g[i], sex[i]]) # Growth distributions
-    #X[i]~dnorm(mu[i,1],  1/sigma2_X) # Growth distributions
-    #log(mu[i,1]) <- beta[g[i], sex[i], period[i]]
-    #X.scaled[i] <- (X[i]-mean(X[1:N]))/sd(X[1:N]) # scaled growth
-    #X.scaled[i] <- (X[i]-mean.X[g[i],sex[i]])/sd.X[g[i],sex[i]] # scaled growth
     X.scaled[i] <- (X[i]-mu_X[g[i],sex[i]])/sigma_X[g[i],sex[i]] # scaled growth
     
     ## Phenotypes:
     Y[i]~dbern(p_mat[i])
     p_mat[i]<-phi(z[i]) # probit link function
     #z[i]<-((X.scaled[i] - theta[i]) / sqrt(sigma2_eta[sex[i]]))
-    # z[i]<-(((X[i]-mu_X) / sqrt(sigma2_eta[sex[i]] + sigma2_X)) - theta[i]) / sqrt(sigma2_eta[sex[i]]/(sigma2_eta[sex[i]] + sigma2_X))
-    # z[i]<-(((X[i]-mu_X[g[i],sex[i]]) / sqrt(sigma2_eta[g[i],sex[i]] + sigma2_X[g[i],sex[i]])) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + sigma2_X[g[i],sex[i]]))
-    #z[i]<-(((X[i]-mu_X[g[i],sex[i]]) / sqrt(sigma2_eta[g[i],sex[i]] + 1)) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + 1))
-    z[i]<-(((X.scaled[i]) / sqrt(sigma2_eta[g[i],sex[i]] + 1)) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + 1))
+     z[i]<-(((X.scaled[i]) / sqrt(sigma2_eta[g[i],sex[i]] + 1)) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + 1))
     
     ## Threshold
     theta[i]~dnorm(mu[i,2], 1/sigma2_res[g[i],sex[i]])
-    #mu[i,2] <- alpha[g[i],sex[i]]
-    mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
-    #mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
+    #mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
+    mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
     
     ## Proximate cue (eta)
     lower[i] <- ifelse(Y[i]==1,theta[i],-100)
     upper[i] <- ifelse(Y[i]==0,theta[i], 100)
     mu_eta[i] <- X.scaled[i] / sqrt(sigma2_eta[g[i],sex[i]] + 1) # normalized
     eta[i] ~dnorm(mu_eta[i], 1/(sigma2_eta[g[i],sex[i]]/ (sigma2_eta[g[i],sex[i]]+ 1)));T(lower[i],upper[i]) # /!\ using model as R function, the truncated normal is not a valid R expression. You can fool the R interpreter by inserting a semicolon
-    #eta[i] ~dnorm(X[i]-mu_X[g[i],sex[i]]/sqrt(sigma2_eta[g[i],sex[i]] + sigma2_X[g[i],sex[i]]), 1/(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]]+ sigma2_X[g[i],sex[i]])));T(lower[i],upper[i]) # /!\ using model as R function, the truncated normal is not a valid R expression. You can fool the R interpreter by inserting a semicolon
-    #eta[i]~dnorm(X[i], 1/sigma2_eta)
     
   } # End of loop i
   
-  #mu_theta[1]~dnorm(0, 1) # male
-  #mu_theta[2]~dnorm(0, 1)#<- mu_theta[1] + delta_theta
-  #delta_theta <- mu_theta[1] - mu_theta[2]#~dnorm(0, 0.001) # female
+  # Average thresholds
   mu_theta[1,1]~dnorm(0, 1) # male before 2005
-  mu_theta[2,1]~dnorm(0, 1)# male after 2005
+  mu_theta[2,1] <- mu_theta[1,1]
+  #mu_theta[2,1]~dnorm(0, 1)# male after 2005
+
   mu_theta[1,2]~dnorm(0, 1) # female before 2005
-  mu_theta[2,2]~dnorm(0, 1)# female after 2005
+  mu_theta[2,2] <- mu_theta[1,2]
+  #mu_theta[2,2]~dnorm(0, 1)# female after 2005
+  
   delta_theta[1] <- mu_theta[1,1] - mu_theta[2,1]#~dnorm(0, 0.001) # female
   delta_theta[2] <- mu_theta[1,2] - mu_theta[2,2]#~dnorm(0, 0.001) # female
   
@@ -62,30 +60,18 @@ LETM<-function(){
     alpha[1,s] <- -a[s] # EE
     alpha[2,s] <- a[s]*k[s] # EL
     alpha[3,s] <- a[s] # LL
-    # alpha[1,s]~dnorm(0, 1)
-    # alpha[2,s]~dnorm(0, 1)
-    # alpha[3,s] <- -alpha[1,s]
+
+    # genotypic values
+    a[s]~dnorm(0, 1)
     
     # dominance deviation
-    #k[s] <- alpha[1,s]/alpha[2,s] # EL
-    #d[s] <- k[s]*a # dominance 
     d[s] <- k[s]*a[s] # dominance 
-    #k[s]~dnorm(0, 1) # scaled dominance 
+    k[s]~dnorm(0, 1) # scaled dominance
     
   } # end loop s
   
-  # genotypic values
-  a[1]~dnorm(0, 1)
-  a[2]~dnorm(0, 1)#<- a[1] + delta_a
-  #a[2] <- a[1]
-  delta_a <- a[1]-a[2]
-  #a[1]<- alpha[3,1]
-  #a[2]<- alpha[3,2]
-  
-  # dominance deviation
-  k[1]~dnorm(0, 1) # scaled dominance 
-  #k.prior~dnorm(0, .1) # scaled dominance 
-  k[2]~dnorm(0, 1)#<- k[1] + delta_k
+
+  delta_a <- a[1] - a[2]
   delta_k <- k[1] - k[2] 
   
   
@@ -144,7 +130,7 @@ LETM<-function(){
     
   }
   
-  
+  # Contribution of residual variances
   ratio[1]~dbeta(3,3)
   ratio[2]~dbeta(3,3)
   ratio[3]~dbeta(3,3)
