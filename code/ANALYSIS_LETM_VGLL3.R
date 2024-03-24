@@ -167,7 +167,7 @@ write.csv2(samples$BUGSoutput$summary, file="results/Summary.csv")
 
 ## Trace and posterior density ####
 MCMCtrace(object = samples,
-          filename="MCMC_jags_all.pdf",
+          filename="results/MCMC_jags_all.pdf",
           wd = "results/",
           pdf = TRUE, # no export to PDF
           ind = TRUE, # separate density lines per chain

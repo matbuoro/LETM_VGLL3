@@ -1,14 +1,17 @@
 
 #________________________DATA________________________#
 #### DATA -------
-load("data/data_vgll3+year.rdata")
-df <- df[order(df$t),]
+#load("data/data_vgll3+year.rdata")
+#df <- df[order(df$t),]
 #View(df)
+# Save data frame to a text file with comments
+#write.csv(df, "data/Data_vgll3_Scorff.csv",row.names = FALSE)
+df <- read.csv("data/Data_vgll3_Scorff.csv")
 
 new.df <- na.omit(df)
 
 # remove year 1985 (only 1 female)
-new.df <- new.df[-which(new.df$t==1985),]
+new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
 
 
 #attach(new.df)
