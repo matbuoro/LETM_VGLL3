@@ -77,7 +77,7 @@ dataToJags$X.scaled <- NULL
 # writexl::write_xlsx(as.data.frame(result_table), "results/CountBySexGenotype.xlsx")
 
 
-data_empty <- list(N=dataToJags$N, X= dataToJags$X, n=dataToJags$n, g=dataToJags$g, sex=dataToJags$sex)
+#data_empty <- list(N=dataToJags$N, X= dataToJags$X, n=dataToJags$n, g=dataToJags$g, sex=dataToJags$sex)
 
 # MODEL ####
 source("code/MODEL_LETM_VGLL3.R")

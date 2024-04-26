@@ -10,7 +10,7 @@ df <- read.csv("data/Data_vgll3_Scorff.csv")
 
 new.df <- na.omit(df)
 
-# remove year 1985 (only 1 female)
+# remove year 1985 (only 1 female) and last year (no MSW)
 new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
 
 
@@ -18,24 +18,65 @@ new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
 
 # g=as.numeric(new.df$g)
 # sex=as.numeric(new.df$sex)
-# year = new.df$t
-
+new.df$year = new.df$t
+new.df$Y = new.df$Y + 1 # 1 for 1SW, 2 for MSW
 
 
 
 # Number of fish by genotype and sex:
-new.df$period <- ifelse(new.df$t<2005,1,2) # after 2004
-tmp <- aggregate(X~g+sex+period, data=new.df, FUN=length)
-n <- xtabs( X ~ g+sex+period, tmp) # convert dataframe to matrix
+#new.df$period <- ifelse(new.df$t<2005,1,2) # after 2004
+#tmp <- aggregate(X~g+sex+period, data=new.df, FUN=length)
+##n <- xtabs( X ~ g+sex+period, tmp) # convert dataframe to matrix
+
+tmp <- aggregate(X~g+sex+Y, data=new.df, FUN=length)
+counts <- xtabs( X ~ g+sex+Y, tmp) # convert dataframe to matrix
 
 ## Frequence of allele E
-p=q=array(,dim=c(2,2))
-for (s in 1:2){    # sex
-  for (t in 1:2){
-    p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
-    q[s,t] <- 1 - p[s,t]
-  }}
-colnames(p)<-c("Before2006","After2005");rownames(p)<-c("Male","Female")
+#p=q=array(,dim=c(2,2))
+#for (s in 1:2){    # sex
+#  for (t in 1:2){
+#    p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
+#    q[s,t] <- 1 - p[s,t]
+#  }}
+#colnames(p)<-c("Before2006","After2005");rownames(p)<-c("Male","Female")
+
+
+# Convert xtabs to array
+counts <- aperm(array(counts, dim = c(3, 2, 2)), c(1, 2, 3))
+
+freqs <- array(,dim=c(3,2,2))
+for (i in 1:2) {
+  for (j in 1:2) {
+    for (k in 1:3){
+      freqs[k,i,j] <- counts[k,i,j]/sum(counts[1:3,i,j])
+    }
+  }
+}
+
+## Load proportion of males by age at sea (1SW vs MSW, and by year)
+load("data/p_male_Scorff.Rdata")
+p_male_1SW <- mean(p_male_1SW[,"50%"])
+p_female_1SW <- 1-p_male_1SW
+p_male_MSW <- mean(p_male_MSW[,"50%"])
+p_female_MSW <- 1-p_male_MSW
+
+
+# loading coda
+#load(paste('results/Results_',stade,"_",year,'.RData',sep=""))
+#fit.mcmc <- as.mcmc(fit$sims.matrix) # using bugs
+#n1SW <- as.matrix(fit.mcmc[,paste0("n_1SW[",1:data$Y,"]")])
+#ntot <- as.matrix(fit.mcmc[,paste0("n_tot[",1:data$Y,"]")])
+p_1SW <- 0.86 #median(n1SW/ntot)
+
+
+mat <- array(,dim=c(3,2,2))
+mat[,1,1]<- freqs[1:3,1,1]* p_1SW * p_male_1SW
+mat[,2,1] <- freqs[1:3,2,1]* p_1SW * p_female_1SW
+mat[,1,2]<- freqs[1:3,1,2]* (1-p_1SW) * p_male_MSW
+mat[,2,2] <- freqs[1:3,2,2]* (1-p_1SW) * p_female_MSW
+
+sum(mat) # should be 1!
+
 
 
 #sum(nByYear[,1:21])
@@ -43,8 +84,8 @@ colnames(p)<-c("Before2006","After2005");rownames(p)<-c("Male","Female")
 #X <- new.df$X
 
 # Number of fish by genotype and sex:
-tmp <- aggregate(X~g+sex, data=new.df, FUN=length)
-n <- xtabs( X ~ g+sex, tmp) # convert dataframe to matrix
+#tmp <- aggregate(X~g+sex, data=new.df, FUN=length)
+#n <- xtabs( X ~ g+sex, tmp) # convert dataframe to matrix
 
 
 tmp <- aggregate(X~g+sex, data=new.df, FUN=mean)
@@ -83,6 +124,7 @@ dataToJags <- list(
   , n=n # number of fish per genotype (row) and sex (col)
   , year = new.df$t# - (min(new.df$t)-1)
   , period = new.df$period # after 2004
+  ,freq = mat[,,1]+mat[,,2]
   #,p=p,q=1-p
 )
 #attach(dataToJags)

@@ -73,7 +73,14 @@ LETM<-function(){
 
   delta_a <- a[1] - a[2]
   delta_k <- k[1] - k[2] 
-  
+
+
+  # Prior for frequencies using Dirichlet distribution
+ # for (i in 1:2) {
+ #   for (j in 1:2) {
+ #     freq[1:3,i,j] ~ ddirch(alpha[1:3,i,j])
+ #   }
+ # }
   
   # residual variance of the latent threshold
   for (s in 1:2){
@@ -84,12 +91,14 @@ LETM<-function(){
     p_sex[s] <- sum(n[1:3,s])/N # female
     #sigma2_sex[s] <- (pow(mu_theta[s] - (mu_theta[1]+p_sex[2]*delta_theta),2))*p_sex[s] # variance sex
    
-    mu_alpha[s] <- (a[s]*(-n[1,s]+k[s]*n[2,s]+n[3,s]))/sum(n[1:3,s])
-    #mu_alpha[2] <- (a[2]*(-n[1,2]+k[1]*n[2,2]+n[3,2]))/sum(n[1:3,2])
+    #mu_alpha[s] <- (a[s]*(-n[1,s]+k[s]*n[2,s]+n[3,s]))/sum(n[1:3,s])
+    mu_alpha[s] <- (a[s]*(-freq[1,s]+k[1]*freq[2,s]+freq[3,s]))
+
     for (j in 1:3){
       
       # Genotype (VGLL3) x Sex variance
-      sigma2_alpha[j,s] <- pow(alpha[j,s] - mu_alpha[s],2)*(n[j,s]/sum(n[1:3,s])) # variance genotype
+      #sigma2_alpha[j,s] <- pow(alpha[j,s] - mu_alpha[s],2)*(n[j,s]/sum(n[1:3,s])) # variance genotype
+      sigma2_alpha[j,s] <- pow(alpha[j,s] - mu_alpha[s],2)*(freq[j,s]) # variance genotype
       
       # Residual genetic variance
       #sigma2_res[j,s] <- sigma_res[j,s]*sigma_res[j,s]
@@ -157,39 +166,39 @@ LETM<-function(){
   
   
   
-  for (s in 1:2){    # sex
+  #for (s in 1:2){    # sex
     # for (t in 1:2){
     #   p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
     #   q[s,t] <- 1 - p[s,t]
     # }
-    p[s] <- sum((2*n[1,s])+(1*n[2,s])+(0*n[3,s]))/(2*sum(n[1:3,s])) # population frequence allelic for E
-    q[s] <- 1 - p[s]
+    #p[s] <- sum((2*n[1,s])+(1*n[2,s])+(0*n[3,s]))/(2*sum(n[1:3,s])) # population frequence allelic for E
+    #q[s] <- 1 - p[s]
 
     #Average effect of the gene substitution
-    gamma[s] <- a[s] + d[s]*(q[s]-p[s])
+    #gamma[s] <- a[s] + d[s]*(q[s]-p[s])
     #alpha1= q[s]*gamma[s]
     #alpha2= -p[s]*gamma[s]
 
     #Population mean
-    M[s] <- a[s]*(p[s]-q[s])+ (2*d[s]*p[s]*q[s])
+    #M[s] <- a[s]*(p[s]-q[s])+ (2*d[s]*p[s]*q[s])
 
     # Phenotypic variance
     # varP = varG + varE = varA + varD + varI + varE
-    varT[s] <- varA[s] + varD[s] + varE[s]
+    #varT[s] <- varA[s] + varD[s] + varE[s]
     #genetic mean of the population
-    varG[s] <- varA[s] + varD[s]
+    #varG[s] <- varA[s] + varD[s]
     # additive genetic variance
-    varA[s] <- 2*p[s]*q[s]*pow(a[s]+d[s]*(q[s]-p[s]),2)
+    #varA[s] <- 2*p[s]*q[s]*pow(a[s]+d[s]*(q[s]-p[s]),2)
     #varA[s] <- 2*p*q*pow(a[s]+d[s]*(q-p),2)
     # dominance genetic variance
-    varD[s] <- pow(2*p[s]*q[s]*d[s],2)
+    #varD[s] <- pow(2*p[s]*q[s]*d[s],2)
     #varD[s] <- pow(2*p*q*d[s],2)
 
     #  h2[s+2] <- varG[s] / varT[s] # total genetic variance contribution = broad-sense heritability
     #  h2[s+4] <- varA[s] / varT[s] # addtive genetic variance contribution = narrow-sense heritability
     #  h2[s+6] <- varD[s] / varT[s] # non-additive genetic variance contribution (dominance + allelic interactions)
 
-  }
+  #}
   
   # sigma2_TOT <-  sigma2_GENOTYPE + sigma2_ENV # variance total
   # sigma2_ENV <- (varE[1]*p_sex[1]) + (varE[2]*p_sex[2])
