@@ -88,7 +88,7 @@ LETM<-function(){
     #sigma2_e[s] <- sigma2_eta[s]/(sigma2_eta[s] + sigma2_X)
     
     # Sex variance
-    p_sex[s] <- sum(n[1:3,s])/N # female
+    #p_sex[s] <- sum(n[1:3,s])/N # female
     #sigma2_sex[s] <- (pow(mu_theta[s] - (mu_theta[1]+p_sex[2]*delta_theta),2))*p_sex[s] # variance sex
    
     #mu_alpha[s] <- (a[s]*(-n[1,s]+k[s]*n[2,s]+n[3,s]))/sum(n[1:3,s])
