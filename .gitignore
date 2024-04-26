@@ -5,5 +5,4 @@
 /article
 /docs
 .DS_Store
-*.RData
 *.Rproj
