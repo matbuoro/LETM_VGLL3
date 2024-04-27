@@ -24,7 +24,7 @@ new.df$Y = new.df$Y + 1 # 1 for 1SW, 2 for MSW
 
 
 # Number of fish by genotype and sex:
-#new.df$period <- ifelse(new.df$t<2005,1,2) # after 2004
+new.df$period <- ifelse(new.df$t<2005,1,2) # after 2004
 #tmp <- aggregate(X~g+sex+period, data=new.df, FUN=length)
 ##n <- xtabs( X ~ g+sex+period, tmp) # convert dataframe to matrix
 
@@ -115,13 +115,13 @@ for (i in 1:nrow(new.df)){
 ## Data used for inference in jags
 dataToJags <- list(
   N=nrow(new.df) # total number of fish
-  , Y=new.df$Y # maturation decision: 1 for 1SW, 0 otherwise
+  , Y=new.df$Y-1 # maturation decision: 1 for 1SW, 0 otherwise
   , X=new.df$X # Observable cue, i.e growth centre/reduit
   , X.scaled=X.scaled # Observable cue, i.e growth centre/reduit
   , mean.X=mean.X, sd.X=sd.X
   , sex=as.numeric(new.df$sex) # sex
   , g=as.numeric(new.df$g) # genotypes: 1 for EE, 2 for EL and 3 for LL
-  , n=n # number of fish per genotype (row) and sex (col)
+  #, n=n # number of fish per genotype (row) and sex (col)
   , year = new.df$t# - (min(new.df$t)-1)
   , period = new.df$period # after 2004
   ,freq = mat[,,1]+mat[,,2]

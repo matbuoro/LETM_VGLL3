@@ -90,12 +90,20 @@ parameters <- c(
   "mu_X","sigma2_X","s"
   #,"beta","eps_X"
   ,"mu_theta", "mu_alpha"#,"eps_theta"
-  ,"delta_theta","delta_X","delta_a","delta_k","delta_res"
-  ,"alpha", "d","a","k","k.prior"
-  ,"chSq","chSq.prior"
-  ,"sigma2_eta","sigma2_e","ratio"
+  ,"delta_theta"
+  #,"delta_X"
+  ,"delta_a"
+  ,"delta_k"
+  #,"delta_res"
+  ,"alpha", "d","a","k"#,"k.prior"
+  #,"chSq","chSq.prior"
+  ,"sigma2_eta"
+  #,"sigma2_e"
+  ,"ratio"
   #, "sigma2_theta"
-  ,"sigma2_alpha","sigma2_res","sigma2_THETA","h2","sigma2_T","sigma2_G"
+  ,"sigma2_alpha","sigma2_res"
+  #,"sigma2_THETA"
+  ,"h2","sigma2_T","sigma2_G"
   ,"theta","eta"
   #,"gamma","M"
   #,"gap"
@@ -104,8 +112,8 @@ parameters <- c(
   #,"var_alpha","var_theta"
   #,"var_alpha_sex","var_alpha_gen"
   #,"sigma2_GENOTYPE", "sigma2_VGLL3","sigma2_SEX","sigma2_GENE","sigma2_TOT","sigma2_RES","h"
-  ,"varG","varA","varD","varT","varE"
-  ,"delta_sigma"
+  #,"varG","varA","varD","varT","varE"
+  #,"delta_sigma"
   # ,"p"
   
   #,"h"
@@ -142,9 +150,9 @@ samples <- jags.parallel(data=dataToJags,
                          parameters.to.save = parameters,  
                          n.chains = 2,  # Number of chains to run.
                          inits = inits,  # initial values for hyperparameters
-                         n.iter = 10000*10,    # n.store * n.thin
+                         n.iter = 10000*50,    # n.store * n.thin
                          n.burnin = 1000,   # discard first X iterations
-                         n.thin = 10,
+                         n.thin = 50,
                          n.cluster= 2
 ) # seep every X iterations
 
@@ -167,14 +175,14 @@ write.csv2(samples$BUGSoutput$summary, file="results/Summary.csv")
 
 ## Trace and posterior density ####
 MCMCtrace(object = samples,
-          filename="results/MCMC_jags_all.pdf",
+          filename="MCMC_jags_all.pdf",
           wd = "results/",
           pdf = TRUE, # no export to PDF
           ind = TRUE, # separate density lines per chain
           Rhat = TRUE, # add Rhat
           n.eff = TRUE, # add eff sample size
           params = parameters,
-          excl=c("theta","eta","Y")
+          excl=c("theta","eta")
 )
 
 

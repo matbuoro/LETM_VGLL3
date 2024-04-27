@@ -98,8 +98,8 @@ if(jags){
   mcmc <- samples$BUGSoutput$sims.matrix
   #mu_alphaMale <- mcmc[,"mu_theta[1,1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
   #mu_alphaFemale <- mcmc[,"mu_theta[1,2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
-  mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1]
-  mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,2]
+  mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
+  mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,1,2]
   alpha1m <- mcmc[,"alpha[1,1]"]
   alpha2m <- mcmc[,"alpha[2,1]"]
   alpha3m <- mcmc[,"alpha[3,1]"]
@@ -108,7 +108,7 @@ if(jags){
   alpha2f <- mcmc[,"alpha[2,2]"]
   alpha3f <- mcmc[,"alpha[3,2]"]
 
-  theta <- array(,dim=c(nrow(mu_alphaFemale),3,2))
+  theta <- array(,dim=c(length(mu_alphaFemale),3,2))
   theta[,1,1] <- mu_alphaMale + alpha1m
   theta[,2,1] <- mu_alphaMale + alpha2m
   theta[,3,1] <- mu_alphaMale + alpha3m
@@ -1066,9 +1066,12 @@ for (s in 1:2){
 # layout_matrix <- matrix(c(1, 2, 3,3), nrow = 2, ncol = 2, byrow = TRUE)
 # # Set up the layout
 # layout(layout_matrix)
-
+par(mfcol=c(1,2))
 range_years <- 1986:2017
 plot(NULL, xlim=c(1986,2017),ylim=c(-3,3), ylab="Proximate cue",xlab="")
+rect(xleft = 1986, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
+rect(xleft = 2005, xright = 2016, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
+
 segments(range_years-.1,etas_medians_all["2.5%",], range_years-.1,etas_medians_all["97.5%",] ,col=1)
 segments(range_years-.1,etas_medians_all["25%",], range_years-.1,etas_medians_all["75%",] ,col=1,lwd=2)
 points(range_years-.1,etas_medians_all["50%",],col=1,pch=16)
@@ -1124,6 +1127,8 @@ points(xfit,yfit1,type="l",lwd=2,col=1)
 #par(mfcol=c(1,1))
 #tmp <- aggregate(thetas_50~year+sex, FUN = mean)
 plot(NULL, xlim=c(1986,2017),ylim=c(-3,3), ylab="Tresholds",xlab="")
+rect(xleft = 1986, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
+rect(xleft = 2005, xright = 2016, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
 
 # for (y in 1986:2017){
 # points(y-.1,thetas_50[year==y & ],col=1,pch=16)
@@ -1166,7 +1171,7 @@ points(xfit,yfit1,type="l",lwd=2,col=2)
 #linearMod <- lm(y ~ x)  # build linear regression model on full data
 #print(linearMod)
 
-
+par(mfcol=c(1,2))
 plot(thetas_medians["50%",,1],thetas_medians["50%",,2],pch="", xlab="MALE",ylab="FEMALE", main="Tresholds (medians)")
 text(thetas_medians["50%",,1],thetas_medians["50%",,2], 1986:2017)
 cor.test( thetas_medians["50%",,1],thetas_medians["50%",,2])
@@ -1178,22 +1183,41 @@ n <- xtabs( X ~ g+sex+t, tmp) # convert dataframe to matrix
 ## Frequence of allele E
 p=q=array(,dim=c(2,32))
 for (s in 1:2){    # sex
-  for (t in 2:31){
+  for (t in 2:30){
     p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
     q[s,t] <- 1 - p[s,t]
   }}
 colnames(p)<-c(range_years);rownames(p)<-c("Male","Female")
 
-#par(mfcol=c(1,1))
-plot(NULL,xlim=c(1986,2017),ylim=c(0.5,1),xlab="",ylab="Allele E frequencies")
+## Load proportion of males by age at sea (1SW vs MSW, and by year)
+load("data/p_male_Scorff.Rdata")
+p_male_1SW <- mean(p_male_1SW[,"50%"])
+p_female_1SW <- 1-p_male_1SW
+p_male_MSW <- mean(p_male_MSW[,"50%"])
+p_female_MSW <- 1-p_male_MSW
+
+
+# loading coda
+#load(paste('results/Results_',stade,"_",year,'.RData',sep=""))
+#fit.mcmc <- as.mcmc(fit$sims.matrix) # using bugs
+#n1SW <- as.matrix(fit.mcmc[,paste0("n_1SW[",1:data$Y,"]")])
+#ntot <- as.matrix(fit.mcmc[,paste0("n_tot[",1:data$Y,"]")])
+p_1SW <- 0.86 #median(n1SW/ntot)
+
+P <- array(,dim=c(2,32))
+P[1,] <- p[1,]*p_1SW*p_male_1SW + p[1,]*(1-p_1SW)*p_male_MSW
+P[2,] <- p[2,]*p_1SW*p_female_1SW + p[2,]*(1-p_1SW)*p_female_MSW
+
+par(mfcol=c(1,1))
+plot(NULL,xlim=c(1986,2017),ylim=c(0.2,0.5),xlab="",ylab="Allele E frequencies")
 for (s in 1:2){
-  y <- p[s,]
+  y <- P[s,]
   x <- range_years
   mod1=loess(y~x,span=0.9)
   xfit=seq(from=min(x),to=max(x),length.out=30)
   yfit1=predict(mod1,newdata=xfit)
   points(xfit,yfit1,type="l",lwd=2,col=col.sex[s])
-  points(range_years,p[s,],col=col.sex[s],pch=16)
+  points(range_years,P[s,],col=col.sex[s],pch=16)
 }
 legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele E frequencies")
 
