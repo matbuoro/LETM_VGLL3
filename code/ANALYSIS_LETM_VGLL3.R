@@ -89,8 +89,8 @@ parameters <- c(
   #"Y"
   "mu_X","sigma2_X","s"
   #,"beta","eps_X"
+  ,"mean_theta","mean_eta","delta_eta","delta_theta"
   ,"mu_theta", "mu_alpha"#,"eps_theta"
-  ,"delta_theta"
   #,"delta_X"
   ,"delta_a"
   ,"delta_k"
@@ -105,14 +105,14 @@ parameters <- c(
   #,"sigma2_THETA"
   ,"h2","sigma2_T","sigma2_G"
   ,"theta","eta"
-  #,"gamma","M"
+  ,"gamma","M"
   #,"gap"
   #,"delta","delta_theta","delta_alpha"
   #,"mu_alpha"
   #,"var_alpha","var_theta"
   #,"var_alpha_sex","var_alpha_gen"
   #,"sigma2_GENOTYPE", "sigma2_VGLL3","sigma2_SEX","sigma2_GENE","sigma2_TOT","sigma2_RES","h"
-  #,"varG","varA","varD","varT","varE"
+  ,"varG","varA","varD","varT","varE"
   #,"delta_sigma"
   # ,"p"
   
@@ -150,9 +150,9 @@ samples <- jags.parallel(data=dataToJags,
                          parameters.to.save = parameters,  
                          n.chains = 2,  # Number of chains to run.
                          inits = inits,  # initial values for hyperparameters
-                         n.iter = 10000*50,    # n.store * n.thin
+                         n.iter = 10000*100,    # n.store * n.thin
                          n.burnin = 1000,   # discard first X iterations
-                         n.thin = 50,
+                         n.thin = 100,
                          n.cluster= 2
 ) # seep every X iterations
 

@@ -233,7 +233,7 @@ for (j in 1:3){
 
 
 #par(mfrow=c(2,2))
-plot(NULL, xlim=c(0,4),ylim=c(-3,3),xlab="Genotype", ylab="Means of maturation thresholds",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=c(-4,4),xlab="Genotype", ylab="Means of maturation thresholds",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
@@ -450,7 +450,7 @@ for (j in 1:3){
 
 
 
-plot(NULL, xlim=c(0,4),ylim=c(0,4),xlab="Genotype", ylab="Residual genetic variances",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=c(0,15),xlab="Genotype", ylab="Residual genetic variances",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
@@ -473,8 +473,11 @@ for (j in 1:3){
   
 }
 
+
+
+par(mfrow=c(1,2))
 ratio <- samples$BUGSoutput$sims.list$ratio
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion residual variance",xaxt="n",main="Environment")
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion proximate cue variance",xaxt="n",main="Environment")
 #axis(1, at=c(1.5,3.5),labels=c("Envir", "Genetic"),las=2)
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
 #axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
@@ -486,15 +489,15 @@ for (j in 1:2){
   text(j,apply(ratio, 2, quantile, probs=0.99)[j]+1,male,col="black")
 }
 
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion residual variance",xaxt="n",main="Genetic")
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion VGLL3 variance",xaxt="n",main="Genetic")
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
 #axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
 #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 for (j in 3:4){
-  segments(j-2, apply(ratio, 2, quantile, probs=0.025)[j],j-2, apply(ratio, 2, quantile, probs=0.975)[j],col="black")
-  segments(j-2, apply(ratio, 2, quantile, probs=0.25)[j],j-2, apply(ratio, 2, quantile, probs=0.75)[j],col="black",lwd=2)
-  points(j-2,apply(ratio, 2, quantile, probs=0.5)[j], pch=21, col="black",bg="white")
-  text(j-2,apply(ratio, 2, quantile, probs=0.99)[j]+1,female,col="black")
+  segments(j-2, apply(1-ratio, 2, quantile, probs=0.025)[j],j-2, apply(1-ratio, 2, quantile, probs=0.975)[j],col="black")
+  segments(j-2, apply(1-ratio, 2, quantile, probs=0.25)[j],j-2, apply(1-ratio, 2, quantile, probs=0.75)[j],col="black",lwd=2)
+  points(j-2,apply(1-ratio, 2, quantile, probs=0.5)[j], pch=21, col="black",bg="white")
+  text(j-2,apply(1-ratio, 2, quantile, probs=0.99)[j]+1,female,col="black")
 }
   
 
@@ -525,7 +528,7 @@ for (j in 3:4){
 
 
 #### GENETIC COMPONENTS
-par(mfrow=c(2,2))
+par(mfrow=c(1,3))
 
 mu_alphas <- cbind(mu_alphaMale,mu_alphaFemale)
 # Mean threshiolds
