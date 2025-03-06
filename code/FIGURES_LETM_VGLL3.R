@@ -68,34 +68,46 @@ jags=TRUE
 
 # ---- DISTRIBUTIONS -----
 if(nimble){
-  load("results/vgll3_scorff_EtaSameSex_nimble.RData")
+  load("results/RESULTS_vgll3_scorff_nimble.RData")
   stats <- MCMCpstr(samples, func = function(x) quantile(x, probs = c(0.025,0.5 ,0.975)))
   mcmc <- do.call(rbind,samples)
   
   ## pool theta samples between the three chains
+  mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
+  mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
+  #mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
+  #mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,1,2]
   alpha1m <- mcmc[,"alpha[1, 1]"]
-  #alpha1m <- c(samples$chain1[,"alpha[1, 1]"], samples$chain2[,"alpha[1, 1]"],samples$chain3[,"alpha[1, 1]"])
-  alpha2m <- c(samples$chain1[,"alpha[2, 1]"], samples$chain2[,"alpha[2, 1]"],samples$chain3[,"alpha[2, 1]"])
-  alpha3m <- c(samples$chain1[,"alpha[3, 1]"], samples$chain2[,"alpha[3, 1]"],samples$chain3[,"alpha[3, 1]"])
+  alpha2m <- mcmc[,"alpha[2, 1]"]
+  alpha3m <- mcmc[,"alpha[3, 1]"]
+  
+  alpha1f <- mcmc[,"alpha[1, 2]"]
+  alpha2f <- mcmc[,"alpha[2, 2]"]
+  alpha3f <- mcmc[,"alpha[3, 2]"]
+  
+  theta <- array(,dim=c(length(mu_alphaFemale),3,2))
+  theta[,1,1] <- mu_alphaMale + alpha1m
+  theta[,2,1] <- mu_alphaMale + alpha2m
+  theta[,3,1] <- mu_alphaMale + alpha3m
+  
+  theta[,1,2] <- mu_alphaFemale + alpha1f
+  theta[,2,2] <- mu_alphaFemale + alpha2f
+  theta[,3,2] <- mu_alphaFemale + alpha3f
   
   
-  alpha1f <- c(samples$chain1[,"alpha[1, 2]"], samples$chain2[,"alpha[1, 2]"],samples$chain3[,"alpha[1, 2]"])
-  alpha2f <- c(samples$chain1[,"alpha[2, 2]"], samples$chain2[,"alpha[2, 2]"],samples$chain3[,"alpha[2, 2]"])
-  alpha3f <- c(samples$chain1[,"alpha[3, 2]"], samples$chain2[,"alpha[3, 2]"],samples$chain3[,"alpha[3, 2]"])
+  sigma2_alpha <- mcmc[,grep("sigma2_alpha", colnames(mcmc))]
+  sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
+  sigma2_res <- mcmc[,grep("sigma2_res", colnames(mcmc))]
   
-  mu_alphaMale <- c(samples$chain1[,"mu_alpha[1]"], samples$chain2[,"mu_alpha[1]"],samples$chain3[,"mu_alpha[1]"])
-  mu_alphaFemale <- c(samples$chain1[,"mu_alpha[2]"], samples$chain2[,"mu_alpha[2]"],samples$chain3[,"mu_alpha[2]"])
-  
-  alphas <- stats$alpha
-  mu_alphas <- stats$mu_alpha
-  
-  sigma2_eta <- stats$sigma2_eta
-  sigma2_theta <- stats$sigma2_theta
-  sigma2_THETA <- stats$sigma2_THETA
+  mu_X <- mcmc[,grep("mu_X", colnames(mcmc))]
+  quantiles_mu_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
+  colnames(quantiles_df) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+  #sigma_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
+  #sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
 }
 
 if(jags){
-  load("results/RESULTS_vgll3_scorff_2025.RData")
+  load("results/RESULTS_vgll3_scorff_jags.RData")
   mcmc <- samples$BUGSoutput$sims.matrix
   mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
   mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
@@ -133,7 +145,7 @@ if(jags){
 
 
 
-pdf("results/FIGURES_VGLL3_Scorff_2025.pdf")
+pdf("results/FIGURES_VGLL3_Scorff_jags.pdf")
 
 par(mfrow=c(2,2))
 # male
@@ -1317,7 +1329,7 @@ text(x=-1,
 
 
 #### ALLELE FREQUENCIES
-load("/media/HDD12To/mbuoro/LETM/data/data_vgll3+year.rdata")
+load("data/data_vgll3+year.rdata")
 years<-sort(unique(df$t))
 nyears<-length(years)
 par(mfcol=c(1,1))

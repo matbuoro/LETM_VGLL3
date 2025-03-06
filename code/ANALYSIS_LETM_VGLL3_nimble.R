@@ -240,7 +240,7 @@ LETM <- nimbleCode({
 # Parameters ####
 parameters <- c(
   #"Y"
-  "mu_X","sigma2_X"
+  "mu_X","sigma2_X","sigma_X"
   ,"sig"
   #,"beta","eps_X"
   #,"mean_theta","mean_eta","delta_eta"
