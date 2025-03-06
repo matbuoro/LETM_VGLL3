@@ -33,8 +33,8 @@ LETM<-function(){
     
     ## Threshold
     theta[i]~dnorm(mu[i,2], 1/sigma2_res[g[i],sex[i]])
-    #mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
-    mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
+    mu[i,2] <- mu_theta[sex[i]] + alpha[g[i],sex[i]]
+    #mu[i,2] <- mu_theta[period[i],sex[i]] + alpha[g[i],sex[i]]
     
     ## Proximate cue (eta)
     lower[i] <- ifelse(Y[i]==1,theta[i],-100)
@@ -42,46 +42,50 @@ LETM<-function(){
     mu_eta[i] <- X.scaled[i] / sqrt(sigma2_eta[g[i],sex[i]] + 1) # normalized
     eta[i] ~dnorm(mu_eta[i], 1/(sigma2_eta[g[i],sex[i]]/ (sigma2_eta[g[i],sex[i]]+ 1)));T(lower[i],upper[i]) # /!\ using model as R function, the truncated normal is not a valid R expression. You can fool the R interpreter by inserting a semicolon
     
-    Male[i] <- (2-sex[i])
-    Female[i] <- (sex[i]-1)
-    
-    period1[i]<-(2-period[i])
-    eta1[i] <- eta[i] * period1[i]
-    theta1M[i] <- theta[i] * period1[i]*Male[i] # male
-    theta1F[i] <- theta[i] * period1[i]*Female[i] # female
-    
-    period2[i]<-(period[i]-1)
-    eta2[i] <- eta[i] * period2[i]
-    theta2M[i] <- theta[i] * period2[i]*Male[i] # male
-    theta2F[i] <- theta[i] * period2[i]*Female[i] # female
+    # Male[i] <- (2-sex[i])
+    # Female[i] <- (sex[i]-1)
+    # 
+    # period1[i]<-(2-period[i])
+    # eta1[i] <- eta[i] * period1[i]
+    # theta1M[i] <- theta[i] * period1[i]*Male[i] # male
+    # theta1F[i] <- theta[i] * period1[i]*Female[i] # female
+    # 
+    # period2[i]<-(period[i]-1)
+    # eta2[i] <- eta[i] * period2[i]
+    # theta2M[i] <- theta[i] * period2[i]*Male[i] # male
+    # theta2F[i] <- theta[i] * period2[i]*Female[i] # female
     
   } # End of loop i
   
   # Average thresholds
-  mu_theta[1,1]~dnorm(0, 1) # male before 2005
+  mu_theta[1]~dnorm(0, 1) # male
+  #mu_theta[2]~dnorm(0, 1) # female
+  mu_theta[2] <- mu_theta[1] + delta_theta
+  delta_theta~dnorm(0, 1)
+  #mu_theta[1,1]~dnorm(0, 1) # male before 2005
   #mu_theta[2,1] <- mu_theta[1,1]
-  mu_theta[2,1]~dnorm(0, 1)# male after 2005
+  #mu_theta[2,1]~dnorm(0, 1)# male after 2005
+  # 
+  # mu_theta[1,2]~dnorm(0, 1) # female before 2005
+  # #mu_theta[2,2] <- mu_theta[1,2]
+  # mu_theta[2,2]~dnorm(0, 1)# female after 2005
   
-  mu_theta[1,2]~dnorm(0, 1) # female before 2005
-  #mu_theta[2,2] <- mu_theta[1,2]
-  mu_theta[2,2]~dnorm(0, 1)# female after 2005
-  
-  delta_theta[1] <- mu_theta[1,1] - mu_theta[2,1]#~dnorm(0, 0.001) # female
-  delta_theta[2] <- mu_theta[1,2] - mu_theta[2,2]#~dnorm(0, 0.001) # female
-
-  mean_theta[1,1] <- sum(theta1M[])/sum(period1[]*Male[]) # before 2005
-  mean_theta[2,1] <- sum(theta1M[])/sum(period2[]*Male[]) # after 2005
-  
-  mean_theta[1,2] <- sum(theta1F[])/sum(period1[]*Female[]) # before 2005
-  mean_theta[2,2] <- sum(theta1F[])/sum(period2[]*Female[]) # after 2005
-  
-  delta_theta[3] <- mean_theta[1,1] - mean_theta[2,1]#~dnorm(0, 0.001) # Male
-  delta_theta[4] <- mean_theta[1,2] - mean_theta[2,2]#~dnorm(0, 0.001) # female
-  
-  
-  mean_eta[1] <- sum(eta1[])/sum(period1[]) # before 2005
-  mean_eta[2] <- sum(eta2[])/sum(period2[]) # after 2005
-  delta_eta <- mean_eta[1] - mean_eta[2]#~dnorm(0, 0.001) # female
+  # delta_theta[1] <- mu_theta[1,1] - mu_theta[2,1]#~dnorm(0, 0.001) # female
+  # delta_theta[2] <- mu_theta[1,2] - mu_theta[2,2]#~dnorm(0, 0.001) # female
+  # 
+  # mean_theta[1,1] <- sum(theta1M[])/sum(period1[]*Male[]) # before 2005
+  # mean_theta[2,1] <- sum(theta1M[])/sum(period2[]*Male[]) # after 2005
+  # 
+  # mean_theta[1,2] <- sum(theta1F[])/sum(period1[]*Female[]) # before 2005
+  # mean_theta[2,2] <- sum(theta1F[])/sum(period2[]*Female[]) # after 2005
+  # 
+  # delta_theta[3] <- mean_theta[1,1] - mean_theta[2,1]#~dnorm(0, 0.001) # Male
+  # delta_theta[4] <- mean_theta[1,2] - mean_theta[2,2]#~dnorm(0, 0.001) # female
+  # 
+  # 
+  # mean_eta[1] <- sum(eta1[])/sum(period1[]) # before 2005
+  # mean_eta[2] <- sum(eta2[])/sum(period2[]) # after 2005
+  # delta_eta <- mean_eta[1] - mean_eta[2]#~dnorm(0, 0.001) # female
   
   for (s in 1:2){    # sex
     # Genotype x Sex effects
@@ -203,18 +207,22 @@ LETM<-function(){
     q[s] <- 1 - p[s]
     
     #Average effect of the gene substitution
+    # Allele substitution effect of vgll3
     gamma[s] <- a[s] + d[s]*(q[s]-p[s])
     #alpha1= q[s]*gamma[s]
     #alpha2= -p[s]*gamma[s]
     
-    #Population mean
+    # Heterozygosity at locus vgl3 in the case of Hardy-Weinberg equilibrium
+    h[s] <- 2*p[s]*q[s]
+    
+    #Population mean (for VGLL3)
     M[s] <- a[s]*(p[s]-q[s])+ (2*d[s]*p[s]*q[s])
     
     # Phenotypic variance
     # varP = varG + varE = varA + varD + varI + varE
-    varT[s] <- varA[s] + varD[s] + varE[s]
+    varT[s] <- varG[s] + varE[s]
     #genetic mean of the population
-    varG[s] <- varA[s] + varD[s]
+    varG[s] <- varA[s] + varD[s] + sigma2_res[1,s]
     # additive genetic variance
     varA[s] <- 2*p[s]*q[s]*pow(a[s]+d[s]*(q[s]-p[s]),2)
     #varA[s] <- 2*p*q*pow(a[s]+d[s]*(q-p),2)
@@ -222,9 +230,11 @@ LETM<-function(){
     varD[s] <- pow(2*p[s]*q[s]*d[s],2)
     #varD[s] <- pow(2*p*q*d[s],2)
     
+    # Contributions to total variance
     h2[s+2] <- varG[s] / varT[s] # total genetic variance contribution = broad-sense heritability
     h2[s+4] <- varA[s] / varT[s] # addtive genetic variance contribution = narrow-sense heritability
-    h2[s+6] <- varD[s] / varT[s] # non-additive genetic variance contribution (dominance + allelic interactions)
+    h2[s+6] <- varD[s] / varG[s] # non-additive genetic variance contribution (dominance + allelic interactions)
+    h2[s+8] <- varD[s] / varT[s] # non-additive genetic variance contribution (dominance + allelic interactions)
     
   }
   

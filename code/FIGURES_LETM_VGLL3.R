@@ -60,6 +60,7 @@ male = intToUtf8(9794)
 gene.name=c("EE","EL","LL")
 col.sex<-c("lightgrey","darkgrey")
 
+nyears <- length(unique(dataToJags$year))
 
 nimble=FALSE
 jags=TRUE
@@ -94,12 +95,12 @@ if(nimble){
 }
 
 if(jags){
-  load("results/RESULTS_vgll3_scorff.RData")
+  load("results/RESULTS_vgll3_scorff_2025.RData")
   mcmc <- samples$BUGSoutput$sims.matrix
-  #mu_alphaMale <- mcmc[,"mu_theta[1,1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
-  #mu_alphaFemale <- mcmc[,"mu_theta[1,2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
-  mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
-  mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,1,2]
+  mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
+  mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
+  #mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
+  #mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,1,2]
   alpha1m <- mcmc[,"alpha[1,1]"]
   alpha2m <- mcmc[,"alpha[2,1]"]
   alpha3m <- mcmc[,"alpha[3,1]"]
@@ -132,7 +133,7 @@ if(jags){
 
 
 
-pdf("results/FIGURES_VGLL3_Scorff.pdf")
+pdf("results/FIGURES_VGLL3_Scorff_2025.pdf")
 
 par(mfrow=c(2,2))
 # male
@@ -159,7 +160,7 @@ par(mfcol=c(1,3))
 #mgp=c(3,1,0)
 #xpd=NA
 #)
-ylim=c(1,4.5)
+ylim=range(dataToJags$X)
 xlim=c(-1.5,1.5)
 
 for (gene in 1:3){
@@ -212,7 +213,7 @@ for (gene in 1:3){
 
 par(mfrow=c(2,2))
 #boxplot(X~g + sex, data=new.df)
-plot(NULL, xlim=c(0,4),ylim=c(2,4),xlab="Genotype", ylab="Growth",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=range(dataToJags$X),xlab="Genotype", ylab="Size",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 
@@ -233,7 +234,7 @@ for (j in 1:3){
 
 
 #par(mfrow=c(2,2))
-plot(NULL, xlim=c(0,4),ylim=c(-4,4),xlab="Genotype", ylab="Means of maturation thresholds",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=c(-4.5,4.5),xlab="Genotype", ylab="Means of maturation thresholds",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
@@ -261,10 +262,10 @@ for (j in 1:3){
 
 ## REACTION NORMS
 #par(mfrow=c(1,2))
-X.sim = seq(1,5,0.1)
+X.sim = seq(200,600,10)
 X.pred <- (X.sim-mean(X))/sd(X) #scale(new.df$X, center = TRUE, scale = TRUE))
 
-X.obs <- seq(min(X), max(X), 0.1)
+X.obs <- seq(min(X), max(X), 10)
 X.obsc <- (X.obs-mean(X))/sd(X)
 
 p.pred=array(,dim=c(length(X.pred), 3, 2))
@@ -424,7 +425,7 @@ par(mfrow=c(2,2))
 
 
 
-plot(NULL, xlim=c(0,4),ylim=c(0,1),xlab="Genotype", ylab="VGLL3 variances",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=c(0,2),xlab="Genotype", ylab="VGLL3 variances",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
@@ -450,7 +451,7 @@ for (j in 1:3){
 
 
 
-plot(NULL, xlim=c(0,4),ylim=c(0,15),xlab="Genotype", ylab="Residual genetic variances",xaxt="n")
+plot(NULL, xlim=c(0,4),ylim=c(0,20),xlab="Genotype", ylab="Residual genetic variances",xaxt="n")
 axis(1, at=1:3,labels=c("EE", "EL", "LL"))
 legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
@@ -477,7 +478,7 @@ for (j in 1:3){
 
 par(mfrow=c(1,2))
 ratio <- samples$BUGSoutput$sims.list$ratio
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion proximate cue variance",xaxt="n",main="Environment")
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution proximate cue to environmental variance",xaxt="n",main="Environment")
 #axis(1, at=c(1.5,3.5),labels=c("Envir", "Genetic"),las=2)
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
 #axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
@@ -489,7 +490,7 @@ for (j in 1:2){
   text(j,apply(ratio, 2, quantile, probs=0.99)[j]+1,male,col="black")
 }
 
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Proportion VGLL3 variance",xaxt="n",main="Genetic")
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution of VGLL3 to genetic variance",xaxt="n",main="Genetic")
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
 #axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
 #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
@@ -593,7 +594,7 @@ for (j in 1:2){
 #h2 <- samples$BUGSoutput$sims.list$h2
 h2 <- mcmc[,paste0("h2[",1:2,"]")]
 
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Total variance contribution",xaxt="n")
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Total variance contribution (h2)",xaxt="n")
 axis(1, at=1:2
      ,labels=c(male, female))
 #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
@@ -989,40 +990,84 @@ for (gene in 1:3){
 #load("~/Documents/RESEARCH/PROJECTS/LETM/VGLL3/results/vgll3_scorff_jags.RData")
 
 thetas <- samples$BUGSoutput$sims.list$theta
-etas <- samples$BUGSoutput$sims.list$eta
+etas <- (samples$BUGSoutput$sims.list$eta)
 
 #thetas_male <- thetas[,sex==1]
 #thetas_female <- thetas[,sex==2]
 
 
 #thetas_medians=array(,dim=c(nrow(thetas), 33,2))
-thetas_medians=array(,dim=c(5, 32,2));rownames(thetas_medians)<-c("2.5%","25%","50%","75%","97.5%")
-etas_medians=array(,dim=c(5, 32,2));rownames(etas_medians)<-c("2.5%","25%","50%","75%","97.5%")
-etas_medians_all=array(,dim=c(5, 32));rownames(etas_medians_all)<-c("2.5%","25%","50%","75%","97.5%")
+thetas_medians=array(,dim=c(5, nyears,2));rownames(thetas_medians)<-c("2.5%","25%","50%","75%","97.5%")
+etas_medians=array(,dim=c(5, nyears,2));rownames(etas_medians)<-c("2.5%","25%","50%","75%","97.5%")
+etas_medians_all=array(,dim=c(5, nyears));rownames(etas_medians_all)<-c("2.5%","25%","50%","75%","97.5%")
 
-  for (y in 1987:2016){
-    #thetas_medians_all[,y-1985,s] <- quantile(apply(thetas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
-    etas_medians_all[,y-1985] <- quantile(apply(etas[,year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
-    for (s in 1:2){
-    thetas_medians[,y-1985,s] <- quantile(apply(thetas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
-    etas_medians[,y-1985,s] <- quantile(apply(etas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
-  }              
-}
+  # for (y in 1987:2016){
+  #   #thetas_medians_all[,y-1985,s] <- quantile(apply(thetas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+  #   etas_medians_all[,y-1985] <- quantile(apply(etas[,year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+  #   for (s in 1:2){
+  #   thetas_medians[,y-1985,s] <- quantile(apply(thetas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+  #   #etas_medians[,y-1985,s] <- quantile(apply(etas[,sex==s & year==y],1,median),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+  # }              
+  # }
 
 
+etas_means_all=array(,dim=c(5, nyears));rownames(etas_means_all)<-c("2.5%","25%","50%","75%","97.5%")
+colnames(etas_means_all)<-min(dataToJags$year):max(dataToJags$year)
 
-thetas_50 <- samples$BUGSoutput$median$theta
-etas_50 <- samples$BUGSoutput$median$eta
-thetas_medians_ind=etas_medians_ind=array(,dim=c(dataToJags$N,32,2))
-for (s in 1:2){
-  for (y in 1987:2016){
-    tmp <- thetas_50[sex==s & year==y]
-    thetas_medians_ind[1:length(tmp),y-1985,s] <- tmp
-    tmp=NULL
-    tmp <- etas_50[sex==s & year==y]
-    etas_medians_ind[1:length(tmp),y-1985,s] <- tmp
+thetas_means_male=array(,dim=c(5, nyears))
+rownames(thetas_means_male)<-c("2.5%","25%","50%","75%","97.5%")
+colnames(thetas_means_male)<-min(dataToJags$year):max(dataToJags$year)
+thetas_means_female=etas_means_female=etas_means_male=thetas_means_male
+
+j=0
+for (y in min(dataToJags$year):max(dataToJags$year)){
+  j=j+1
+  #print(j)
+  tmp=NULL
+  tmp <-etas[,which(year==y)]
+  if(is.null(ncol(tmp))==FALSE) {
+    etas_means_all[,j] <- quantile(apply(tmp,1,mean),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+ 
+tmp_male <- thetas[,which(sex==1 & year==y)]
+thetas_means_male[,j] <- quantile(apply(tmp_male,1,mean),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+tmp_male <- etas[,which(sex==1 & year==y)]
+etas_means_male[,j] <- quantile(apply(tmp_male,1,mean),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+
+tmp_female <- thetas[,which(sex==2 & year==y)]
+thetas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.025,0.25, 0.5,0.75, 0.975))
+tmp_female <- etas[,which(sex==2 & year==y)]
+etas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.025,0.25, 0.5,0.75, 0.975))
   }
 }
+
+
+
+# thetas_50 <- samples$BUGSoutput$median$theta
+# etas_50 <- samples$BUGSoutput$median$eta
+# thetas_medians_ind=etas_medians_ind=array(,dim=c(dataToJags$N,32,2))
+# for (s in 1:2){
+#   for (y in 1987:2016){
+#     tmp <- thetas_50[sex==s & year==y]
+#     thetas_medians_ind[1:length(tmp),y-1985,s] <- tmp
+#     tmp=NULL
+#     tmp <- etas_50[sex==s & year==y]
+#     etas_medians_ind[1:length(tmp),y-1985,s] <- tmp
+#   }
+# }
+
+thetas_means <- samples$BUGSoutput$mean$theta
+etas_means <- samples$BUGSoutput$mean$eta
+thetas_means_ind=etas_means_ind=array(,dim=c(dataToJags$N,nyears,2))
+for (s in 1:2){
+  for (y in 1993:2016){
+    tmp <- thetas_means[sex==s & year==y]
+    thetas_means_ind[1:length(tmp),y-1992,s] <- tmp
+    tmp=NULL
+    tmp <- etas_means[sex==s & year==y]
+    etas_means_ind[1:length(tmp),y-1992,s] <- tmp
+  }
+}
+
 
 
 #par(mfcol=c(1,2))
@@ -1070,21 +1115,21 @@ for (s in 1:2){
 # # Set up the layout
 # layout(layout_matrix)
 par(mfcol=c(1,2))
-range_years <- 1986:2017
-plot(NULL, xlim=c(1986,2017),ylim=c(-3,3), ylab="Proximate cue",xlab="")
+range_years <- as.numeric(colnames(etas_means_all))
+plot(NULL, xlim=range(range_years),ylim=c(-3,3), ylab="Proximate cue",xlab="")
 rect(xleft = 1986, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
 rect(xleft = 2005, xright = 2016, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
 
-segments(range_years-.1,etas_medians_all["2.5%",], range_years-.1,etas_medians_all["97.5%",] ,col=1)
-segments(range_years-.1,etas_medians_all["25%",], range_years-.1,etas_medians_all["75%",] ,col=1,lwd=2)
-points(range_years-.1,etas_medians_all["50%",],col=1,pch=16)
+segments(range_years-.1,etas_means_all["2.5%",], range_years-.1,etas_means_all["97.5%",] ,col=1)
+segments(range_years-.1,etas_means_all["25%",], range_years-.1,etas_means_all["75%",] ,col=1,lwd=2)
+points(range_years-.1,etas_means_all["50%",],col=1,pch=16)
 # for (y in 1:32){
 #   for (i in 1:nrow(etas_medians_ind[,,1])){
 #  #   points(1985+y, etas_medians_ind[i,y,1],col=1,pch=3)
 #   }
 #   }
 
-y <- etas_medians_all["50%",]
+y <- etas_means_all["50%",]
 x <- range_years
 mod1=loess(y~x,span=0.5)
 xfit=seq(from=min(x),to=max(x),length.out=30)
@@ -1129,24 +1174,25 @@ points(xfit,yfit1,type="l",lwd=2,col=1)
 
 #par(mfcol=c(1,1))
 #tmp <- aggregate(thetas_50~year+sex, FUN = mean)
-plot(NULL, xlim=c(1986,2017),ylim=c(-3,3), ylab="Tresholds",xlab="")
-rect(xleft = 1986, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
-rect(xleft = 2005, xright = 2016, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
+range_years <- as.numeric(colnames(thetas_means_male))
+plot(NULL, xlim=range(range_years),ylim=c(-5,5), ylab="Tresholds",xlab="")
+# rect(xleft = 1986, xright = 2005, ybottom = -5, ytop = 5,border = "lightgrey", col = "lightgrey")
+# rect(xleft = 2005, xright = 2016, ybottom = -5, ytop = 5,border = "darkgrey", col = "darkgrey")
 
 # for (y in 1986:2017){
 # points(y-.1,thetas_50[year==y & ],col=1,pch=16)
 # }
 
-segments(range_years-.1,thetas_medians["2.5%",,1], range_years-.1,thetas_medians["97.5%",,1] ,col=1)
-segments(range_years-.1,thetas_medians["25%",,1], range_years-.1,thetas_medians["75%",,1] ,col=1,lwd=2)
-points(range_years-.1,thetas_medians["50%",,1],col=1,pch=16)
+segments(range_years-.1,thetas_means_male["2.5%",], range_years-.1,thetas_means_male["97.5%",] ,col=1)
+segments(range_years-.1,thetas_means_male["25%",], range_years-.1,thetas_means_male["75%",] ,col=1,lwd=2)
+points(range_years-.1,thetas_means_male["50%",],col=1,pch=16)
 # for (y in 1:32){
 #   for (i in 1:nrow(thetas_medians_ind[,,1])){
 # #    points(1985+y, thetas_medians_ind[i,y,1],col=1,pch=3)
 #   }
 # }
 
-y <- thetas_medians["50%",,1]
+y <- thetas_means_male["50%",]
 x <- range_years
 mod1=loess(y~x,span=0.5)
 xfit=seq(from=min(x),to=max(x),length.out=30)
@@ -1154,16 +1200,16 @@ yfit1=predict(mod1,newdata=xfit)
 points(xfit,yfit1,type="l",lwd=2,col=1)
 
 
-segments(range_years+.1,thetas_medians["2.5%",,2], range_years+.1,thetas_medians["97.5%",,2] ,col=2)
-segments(range_years+.1,thetas_medians["25%",,2], range_years+.1,thetas_medians["75%",,2] ,col=2,lwd=2)
-points(range_years+.1,thetas_medians["50%",,2],col=2,pch=16)
+segments(range_years-.1,thetas_means_female["2.5%",], range_years-.1,thetas_means_female["97.5%",] ,col=2)
+segments(range_years-.1,thetas_means_female["25%",], range_years-.1,thetas_means_female["75%",] ,col=2,lwd=2)
+points(range_years-.1,thetas_means_female["50%",],col=2,pch=16)
 for (y in 1:32){
-  for (i in 1:nrow(thetas_medians_ind[,,2])){
+  for (i in 1:nrow(thetas_means_ind[,,2])){
  #   points(1985+y, thetas_medians_ind[i,y,2],col=2,pch=3)
   }
 }
 
-y <- thetas_medians["50%",,2]
+y <- thetas_means_female["50%",]
 x <- range_years
 mod1=loess(y~x,span=0.5)
 xfit=seq(from=min(x),to=max(x),length.out=30)
@@ -1171,26 +1217,120 @@ yfit1=predict(mod1,newdata=xfit)
 points(xfit,yfit1,type="l",lwd=2,col=2)
 
 
+
+
+
+
+
+
+
+
+
 #linearMod <- lm(y ~ x)  # build linear regression model on full data
 #print(linearMod)
 
-par(mfcol=c(1,2))
-plot(thetas_medians["50%",,1],thetas_medians["50%",,2],pch="", xlab="MALE",ylab="FEMALE", main="Tresholds (medians)")
-text(thetas_medians["50%",,1],thetas_medians["50%",,2], 1986:2017)
-cor.test( thetas_medians["50%",,1],thetas_medians["50%",,2])
+par(mfcol=c(1,3))
+plot(thetas_means_male["50%",],thetas_means_female["50%",],pch="", xlab="MALE",ylab="FEMALE", main="Tresholds (medians)")
+text(thetas_means_male["50%",],thetas_means_female["50%",], 1993:2016)
+# Compute correlation
+cor_result <- cor.test(thetas_means_male["50%",], thetas_means_female["50%",])
+
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+
+# Add correlation text to the plot (top-left corner)
+text(x=min(thetas_means_male["50%",]), 
+     y=max(thetas_means_female["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato")  # 'pos=4' places text to the right
+
+
+
+
+plot(etas_means_all["50%",],thetas_means_male["50%",],pch="", xlab="eta",ylab="theta", main="MALE")
+text(etas_means_all["50%",],thetas_means_male["50%",], 1993:2016)
+# Compute correlation
+cor_result <- cor.test(etas_means_all["50%",], thetas_means_male["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=min(etas_means_all["50%",]), 
+     y=max(thetas_means_male["50%",])*0.9, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato")  # 'pos=4' places text to the right
+
+
+plot(etas_means_all["50%",],thetas_means_female["50%",],pch="", xlab="eta",ylab="theta", main="FEMALE")
+text(etas_means_all["50%",],thetas_means_female["50%",], 1993:2016)
+# Compute correlation
+cor_result <- cor.test(etas_means_all["50%",], thetas_means_female["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=min(etas_means_all["50%",]), 
+     y=max(thetas_means_female["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato")  # 'pos=4' places text to the right
+
+
+
+
+
+par(mfcol=c(1,1))
+plot(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears], xlim=c(-1,1), ylim=c(-3.5,2), pch="",main="Male (black) / Female (red)", xlab="Proximate cues",ylab="Thresholds")
+points(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears], pch="")
+text(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears],1993:2016,cex=0.75)
+# Compute correlation
+cor_result <- cor.test(etas_means_male["50%",], thetas_means_male["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=-1, 
+     y=max(thetas_means_male["50%",])*0.9, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="black")  # 'pos=4' places text to the right
+
+#plot(etas_means_all["50%",1:nyears],thetas_means_female["50%",1:nyears], xlim=c(-1,1), ylim=c(-0.5,2), pch="",main="Female", xlab="Proximate cues",ylab="Thresholds")
+points(etas_means_female["50%",1:nyears],thetas_means_female["50%",1:nyears], pch="")
+text(etas_means_female["50%",1:nyears],thetas_means_female["50%",1:nyears],1993:2016,cex=0.75,col="tomato")
+# Compute correlation
+cor_result <- cor.test(etas_means_female["50%",], thetas_means_female["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=-1, 
+     y=max(thetas_means_female["50%",])*0.9, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato")  # 'pos=4' places text to the right
+
+
+
+
+
+
+
+
 
 #### ALLELE FREQUENCIES
-#par(mfcol=c(1,1))
-tmp <- aggregate(X~g+sex+t, data=new.df, FUN=length)
+load("/media/HDD12To/mbuoro/LETM/data/data_vgll3+year.rdata")
+years<-sort(unique(df$t))
+nyears<-length(years)
+par(mfcol=c(1,1))
+tmp <- aggregate(X~g+sex+t, data=df, FUN=length)
 n <- xtabs( X ~ g+sex+t, tmp) # convert dataframe to matrix
 ## Frequence of allele E
-p=q=array(,dim=c(2,32))
+p=q=array(,dim=c(2,nyears))
 for (s in 1:2){    # sex
-  for (t in 2:30){
+  for (t in 1:nyears){
     p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
     q[s,t] <- 1 - p[s,t]
   }}
-colnames(p)<-c(range_years);rownames(p)<-c("Male","Female")
+colnames(p)<-years;rownames(p)<-c("Male","Female")
 
 ## Load proportion of males by age at sea (1SW vs MSW, and by year)
 load("data/p_male_Scorff.Rdata")
@@ -1207,78 +1347,86 @@ p_female_MSW <- 1-p_male_MSW
 #ntot <- as.matrix(fit.mcmc[,paste0("n_tot[",1:data$Y,"]")])
 p_1SW <- 0.86 #median(n1SW/ntot)
 
-P <- array(,dim=c(2,32))
-P[1,] <- p[1,]*p_1SW*p_male_1SW + p[1,]*(1-p_1SW)*p_male_MSW
-P[2,] <- p[2,]*p_1SW*p_female_1SW + p[2,]*(1-p_1SW)*p_female_MSW
+P <- array(,dim=c(2,nyears))
+P[1,] <- q[1,]*p_1SW*p_male_1SW + q[1,]*(1-p_1SW)*p_male_MSW
+P[2,] <- q[2,]*p_1SW*p_female_1SW + q[2,]*(1-p_1SW)*p_female_MSW
 
 par(mfcol=c(1,1))
-plot(NULL,xlim=c(1986,2017),ylim=c(0.2,0.5),xlab="",ylab="Allele E frequencies")
+plot(NULL,xlim=c(min(years),max(years)),ylim=c(0,.3),xlab="",ylab="Allele L frequencies")
 for (s in 1:2){
-  y <- P[s,]
-  x <- range_years
+  y <- P[s,][-1]
+  x <- sort(years)[-1]
   mod1=loess(y~x,span=0.9)
-  xfit=seq(from=min(x),to=max(x),length.out=30)
+  xfit=seq(from=min(x),to=max(x),length.out=nyears-1)
   yfit1=predict(mod1,newdata=xfit)
   points(xfit,yfit1,type="l",lwd=2,col=col.sex[s])
-  points(range_years,P[s,],col=col.sex[s],pch=16)
+  points(years,P[s,],col=col.sex[s],pch=16)
 }
-legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele E frequencies")
-
-
-
-
-par(mfcol=c(2,2))
-plot(etas_medians["50%",2:31,1],thetas_medians["50%",2:31,1], xlim=c(-1,1), ylim=c(-2,-0.5), pch="",main="Male", xlab="Proximate cues",ylab="Thresholds")
-points(etas_medians["50%",2:31,1],thetas_medians["50%",2:31,1], pch="")
-text(etas_medians["50%",2:31,1],thetas_medians["50%",2:31,1],1986:2016,cex=0.75)
-
-plot(etas_medians["50%",2:31,2],thetas_medians["50%",2:31,2], xlim=c(-.5,1), ylim=c(0.25,1.25), pch="", main="Female", xlab="Proximate cues",ylab="Thresholds")
-points(etas_medians["50%",2:31,2],thetas_medians["50%",2:31,2], pch="")
-text(etas_medians["50%",2:31,2],thetas_medians["50%",2:31,2],1986:2016,cex=0.75)
-
-
-#par(mfcol=c(1,2))
-plot(p[1,2:31],thetas_medians["50%",2:31,1], xlim=c(0.5,1), ylim=c(-2,-0.5), pch="",main="Male", xlab="Freq allele E",ylab="Thresholds")
-points(p[1,2:31],thetas_medians["50%",2:31,1], pch="")
-text(p[1,2:31],thetas_medians["50%",2:31,1],1986:2016,cex=0.75)
-
-plot(p[2,2:31],thetas_medians["50%",2:31,2], xlim=c(0.5,1), ylim=c(0.25,1.25), pch="", main="Female", xlab="Freq allele E",ylab="Thresholds")
-points(p[2,2:31],thetas_medians["50%",2:31,2], pch="")
-text(p[2,2:31],thetas_medians["50%",2:31,2],1986:2016,cex=0.75)
-
-
-
+legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele L frequencies")
 
 
 
 
 
 par(mfcol=c(1,1))
+plot(P[1,9:(nyears-1)],thetas_means_male["50%",], xlim=c(0, .3), ylim=c(-3.5,2), pch="",main="Male", xlab="Freq allele L",ylab="Thresholds")
+points(P[1,9:(nyears-1)],thetas_means_male["50%",], pch="")
+text(P[1,9:(nyears-1)],thetas_means_male["50%",],1993:2016,cex=0.75)
+# Compute correlation
+cor_result <- cor.test(P[1,9:(nyears-1)],thetas_means_male["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_male["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="black") 
 
-thetas <- samples$BUGSoutput$sims.list$theta
-etas <- samples$BUGSoutput$sims.list$eta
+#plot(P[2,9:(nyears-1)],thetas_means_female["50%",], xlim=c(0, .3), ylim=c(-3,2), pch="", main="Female", xlab="Freq allele L",ylab="Thresholds")
+points(P[2,9:(nyears-1)],thetas_means_female["50%",], pch="")
+text(P[2,9:(nyears-1)],thetas_means_female["50%",],1993:2016,cex=0.75,col="tomato")
+# Compute correlation
+cor_result <- cor.test(P[2,9:(nyears-1)],thetas_means_female["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_female["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato") 
 
 
-thetas.stat <- apply(thetas,2,quantile,probs=c(0.025, 0.25, 0.5, 0.75, 0.975))
-etas.stat <- apply(etas,2,quantile,probs=c(0.025, 0.25, 0.5, 0.75, 0.975))
 
-smp=sample(1:dataToJags$N,50,replace=FALSE)
 
-plot(NULL, xlim=c(0,50), ylim=c(-10,10),xlab="",ylab="Individuals")
-for (i in 1:50){
-  segments(i-.1,thetas.stat["2.5%",smp[i]], i-.1,thetas.stat["97.5%",smp[i]] ,col=1)
-  segments(i-.1,thetas.stat["25%",smp[i]], i-.1,thetas.stat["75%",smp[i]] ,col=1,lwd=2)
-  points(i-0.1, thetas.stat[3,smp[i]], pch=21,bg="white",col=1)
-  
-  segments(i+.1,etas.stat["2.5%",smp[i]], i+.1,etas.stat["97.5%",smp[i]] ,col=2)
-  segments(i+.1,etas.stat["25%",smp[i]], i+.1,etas.stat["75%",smp[i]] ,col=2,lwd=2)
-  points(i+.1, etas.stat[3,smp[i]], pch=21,bg="white",col=2)
-  
-  #points(i+.1, dataToJags$X.scaled[smp[i]], pch="X",bg="white",col=2)
-  points(i+.1, X.scaled[smp[i]], pch="X",bg="white",col=2)
-  text(i,-10,labels=dataToJags$Y[smp[i]],cex=0.75)  
-}
-legend("topleft",legend=c("Threshold","Prox. Cue","Growth scaled"),pch=c(1,1,"X"),col=c(1,2,2) ,bty="n")
+# 
+# par(mfcol=c(1,1))
+# 
+# thetas <- samples$BUGSoutput$sims.list$theta
+# etas <- samples$BUGSoutput$sims.list$eta
+# 
+# 
+# thetas.stat <- apply(thetas,2,quantile,probs=c(0.025, 0.25, 0.5, 0.75, 0.975))
+# etas.stat <- apply(etas,2,quantile,probs=c(0.025, 0.25, 0.5, 0.75, 0.975))
+# 
+# smp=sample(1:dataToJags$N,50,replace=FALSE)
+# 
+# plot(NULL, xlim=c(0,50), ylim=c(-10,10),xlab="",ylab="Individuals")
+# for (i in 1:50){
+#   segments(i-.1,thetas.stat["2.5%",smp[i]], i-.1,thetas.stat["97.5%",smp[i]] ,col=1)
+#   segments(i-.1,thetas.stat["25%",smp[i]], i-.1,thetas.stat["75%",smp[i]] ,col=1,lwd=2)
+#   points(i-0.1, thetas.stat[3,smp[i]], pch=21,bg="white",col=1)
+#   
+#   segments(i+.1,etas.stat["2.5%",smp[i]], i+.1,etas.stat["97.5%",smp[i]] ,col=2)
+#   segments(i+.1,etas.stat["25%",smp[i]], i+.1,etas.stat["75%",smp[i]] ,col=2,lwd=2)
+#   points(i+.1, etas.stat[3,smp[i]], pch=21,bg="white",col=2)
+#   
+#   #points(i+.1, dataToJags$X.scaled[smp[i]], pch="X",bg="white",col=2)
+#   points(i+.1, X.scaled[smp[i]], pch="X",bg="white",col=2)
+#   text(i,-10,labels=dataToJags$Y[smp[i]],cex=0.75)  
+# }
+# legend("topleft",legend=c("Threshold","Prox. Cue","Growth scaled"),pch=c(1,1,"X"),col=c(1,2,2) ,bty="n")
 
 
 dev.off()

@@ -6,12 +6,12 @@
 #View(df)
 # Save data frame to a text file with comments
 #write.csv(df, "data/Data_vgll3_Scorff.csv",row.names = FALSE)
-df <- read.csv("data/Data_vgll3_Scorff.csv")
-
+#df <- read.csv("data/Data_vgll3_Scorff.csv")
+load("data/data_vgll3_2024.rdata")
 new.df <- na.omit(df)
 
 # remove year 1985 (only 1 female) and last year (no MSW)
-new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
+new.df <- subset(new.df, !(t %in% c(1985, 1986, 1992, 2017)))
 
 
 #attach(new.df)
