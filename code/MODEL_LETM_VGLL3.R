@@ -12,11 +12,11 @@ LETM<-function(){
     for (gen in 1:3){
       mu_X[gen,s] ~ dnorm(0,0.001)
       
-      sigma_X[gen,s]~dgamma(2,1/s)#dunif(0,10)
+      sigma_X[gen,s]~dgamma(2,1/sig)#dunif(0,10)
       sigma2_X[gen,s] <- pow(sigma_X[gen,s],2)
     }}
   
-  s~dchisqr(2)
+  sig~dchisqr(2)
   
   #======== LIKELIHOOD ========#
   for (i in 1:N) {
@@ -41,7 +41,6 @@ LETM<-function(){
     upper[i] <- ifelse(Y[i]==0,theta[i], 100)
     mu_eta[i] <- X.scaled[i] / sqrt(sigma2_eta[g[i],sex[i]] + 1) # normalized
     eta[i] ~dnorm(mu_eta[i], 1/(sigma2_eta[g[i],sex[i]]/ (sigma2_eta[g[i],sex[i]]+ 1)));T(lower[i],upper[i]) # /!\ using model as R function, the truncated normal is not a valid R expression. You can fool the R interpreter by inserting a semicolon
-    
     # Male[i] <- (2-sex[i])
     # Female[i] <- (sex[i]-1)
     # 

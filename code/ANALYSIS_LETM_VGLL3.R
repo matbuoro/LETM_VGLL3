@@ -90,7 +90,7 @@ source("code/MODEL_LETM_VGLL3.R")
 ## Parameters ####
 parameters <- c(
   #"Y"
-  "mu_X","sigma2_X","s"
+  "mu_X","sigma2_X","sig"
   #,"beta","eps_X"
   #,"mean_theta","mean_eta","delta_eta"
   ,"delta_theta"
@@ -132,45 +132,16 @@ parameters <- c(
 inits <- function(){
   list(
     #eta=eta, theta=theta
-    #MU_theta=1, sigma_theta=2
-    # chSq=c(1,NA),delta_res=0
-    #, h2=c(0.3,NA, rep(NA,6))
     mu_theta=c(0,NA),delta_theta=3.8
-    #mu_theta=matrix(c(0,0,1,1),nrow=2,ncol=2)
-    # ,ratio=c(0.5,0.1)
-    #delta_theta=delta_theta,
     , a=c(3,1)#,delta_a=0
     , k=c(-1,0)#,delta_k=1
-    #, mu_X=2.7
-    #,beta=array(0,dim=c(3,2,2)),sigma_beta=0.1
-    #,sigma_X=matrix(.2,3,2)
-    ,ratio=rep(0.5, 4)
+    , ratio=c(rep(0.5, 3),NA)
+    , mu_X=dataToJags$mean.X
+    , sigma_X=dataToJags$sd.X
+    , sig=30
   )
 }
 
-
-# RUN MCMC ####
-# n_chains <- 3 # number of chains
-# n_store <- 5000 # target of number of iteration to store per chain
-# n_burnin <- 5000 # number of iterations to discard
-# n_thin <- 10 # thinning interval
-# n_iter <- (n_store * n_thin) + n_burnin # number of iterations to run per chain
-# print(n_iter)
-
-
-#start_time <- Sys.time()
-  # mcmc_output <- nimbleMCMC(code = LETM,     # model code  
-  #                           data = dataToJags,                  # data
-  #                           constants =constants,        # constants
-  #                           inits = inits,          # initial values
-  #                           monitors = parameters_to_save,   # parameters to monitor
-  #                           WAIC=FALSE,                      #waic
-  #                           niter = n_iter,                  # nb iterations
-  #                           nburnin = n_burnin,              # length of the burn-in
-  #                           nchains = n_chains,              # nb of chains
-  #                           thin = n_thin,                   # thinning interval (default = 1)
-  #                           samplesAsCodaMCMC=T
-  # )             #coda     
 
 
 # JAGS ####
@@ -181,9 +152,9 @@ samples <- jags.parallel(data=dataToJags,
                          parameters.to.save = parameters,  
                          n.chains = 3,  # Number of chains to run.
                          inits = inits,  # initial values for hyperparameters
-                         n.iter = 10000*100,    # n.store * n.thin
+                         n.iter = 5000*20,    # n.store * n.thin
                          n.burnin = 1000,   # discard first X iterations
-                         n.thin = 100,
+                         n.thin = 20,
                          n.cluster= 3
 ) # seep every X iterations
 # End time measurement
@@ -192,9 +163,9 @@ end_time <- Sys.time()
 time_taken <- end_time - start_time
 print(time_taken)
 
-save(samples,time_taken, file="results/RESULTS_vgll3_scorff_2025.RData")
+save(samples,time_taken, file="results/RESULTS_vgll3_scorff_jags.RData")
 
-write.csv2(samples$BUGSoutput$summary, file="results/Summary_2025.csv")
+write.csv2(samples$BUGSoutput$summary, file="results/Summary_jags.csv")
 
 
 # RESULTS ####
@@ -211,7 +182,7 @@ write.csv2(samples$BUGSoutput$summary, file="results/Summary_2025.csv")
 
 ## Trace and posterior density ####
 MCMCtrace(object = samples,
-          filename="MCMC_jags_all_test.pdf",
+          filename="MCMC_jags_2025.pdf",
           wd = "results/",
           pdf = TRUE, # no export to PDF
           ind = TRUE, # separate density lines per chain
