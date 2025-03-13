@@ -305,7 +305,7 @@ inits <- function(){
 n_chains <- 3 # number of chains
 n_store <- 5000 # target of number of iteration to store per chain
 n_burnin <- 1000 # number of iterations to discard
-n_thin <- 20 # thinning interval
+n_thin <- 10 # thinning interval
 n_iter <- (n_store * n_thin) + n_burnin # number of iterations to run per chain
 print(n_iter)
 
@@ -382,25 +382,41 @@ MCMCtrace(object = samples,
 )
 
 
+parToPlot <-  c(
+#"mu_X","sigma2_X","sigma_X"
+"sig"
+,"mu_theta", "mu_alpha"
+,"a","k"
+,"sigma2_eta"
+,"ratio"
+,"sigma2_alpha","sigma2_res"
+)
 
-# summary(samples)
-# gelman.diag(samples)
-#
-# # MCMCsamples <- as.matrix(samples)
-# # plot(samples[ , 'h2'], type = 'l', xlab = 'iteration',  ylab = expression(h^2))
-# # plot(density(MCMCsamples[,'h2']))
-#
-# # # or to use some plots in coda
-# # ## Pairs.panel
-# panel.hist <- function(x, ...)
-# {
-#   usr <- par("usr"); on.exit(par(usr))
-#   par(usr = c(usr[1:2], 0, 1.5) )
-#   h <- hist(x, plot = FALSE)
-#   breaks <- h$breaks; nB <- length(breaks)
-#   y <- h$counts; y <- y/max(y)
-#   rect(breaks[-nB], 0, breaks[-1], y, col="grey", ...)
-# }
 
-# pairs(as.matrix(samples),lower.panel=panel.smooth,diag.panel=panel.hist,pch='.')
+library(corrplot)  # For correlation plot
 
+# Convert MCMC list to matrix
+samples_mat <- as.matrix(samples) 
+
+# Get parameter names from samples
+param_names <- colnames(samples_mat)
+
+# Find parameters that match any in `parToPlot` (including multi-dimensional ones)
+matching_params <- param_names[grepl(paste0("^(", paste(parToPlot, collapse = "|"), ")\\[?\\d*\\]?$"), param_names)]
+
+# Check if we found matching parameters
+if (length(matching_params) == 0) {
+  stop("No matching parameters found. Check parameter names!")
+}
+
+# Extract only the relevant parameters
+filtered_samples <- samples_mat[, matching_params, drop = FALSE]
+
+
+# Compute correlation matrix
+cor_matrix <- cor(filtered_samples)
+
+# Plot the correlation matrix
+corrplot(cor_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.srt = 45, 
+         addCoef.col = "black", number.cex = 0.7)

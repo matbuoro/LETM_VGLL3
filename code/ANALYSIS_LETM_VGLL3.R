@@ -7,10 +7,13 @@ rm(list=ls())   # Clear memory
 # Install from source for MacOS, Linux, or Windows:
 # install.packages("nimble", repos = "http://r-nimble.org", type = "source")
 # the 'type = "source"' is unnecessary for Linx
+library(rjags)
 require(R2jags)
 #library(igraph)
 library(MCMCvis)
 library(writexl)
+library(parallel)
+detectCores()
 
 # DATA ####
 source("code/DATA_VGLL3_Scorff.R")
@@ -147,14 +150,21 @@ inits <- function(){
 # JAGS ####
 # Start time measurement
 start_time <- Sys.time()
-samples <- jags.parallel(data=dataToJags,  
+data <- list(N=dataToJags$N
+                   ,Y=dataToJags$Y
+                   , X=dataToJags$X
+, sex=dataToJags$sex
+, g=dataToJags$g
+, freq=dataToJags$freq )
+
+samples <- jags.parallel(data=data,  
                          model.file = LETM,
                          parameters.to.save = parameters,  
                          n.chains = 3,  # Number of chains to run.
                          inits = inits,  # initial values for hyperparameters
-                         n.iter = 5000*20,    # n.store * n.thin
+                         n.iter = 5000*100,    # n.store * n.thin
                          n.burnin = 1000,   # discard first X iterations
-                         n.thin = 20,
+                         n.thin = 100,
                          n.cluster= 3
 ) # seep every X iterations
 # End time measurement

@@ -7,7 +7,7 @@
 # Save data frame to a text file with comments
 #write.csv(df, "data/Data_vgll3_Scorff.csv",row.names = FALSE)
 #df <- read.csv("data/Data_vgll3_Scorff.csv")
-load("data/data_vgll3_2024.rdata")
+load("data/data_vgll3.rdata")
 new.df <- na.omit(df)
 
 # remove year 1985 (only 1 female) and last year (no MSW)

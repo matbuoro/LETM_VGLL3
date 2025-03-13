@@ -1,5 +1,9 @@
 rm(list=ls())   # Clear memory
 
+# LIBRARY ####
+library(mcmcplots)
+
+
 #____________________DATA______________________#
 source("code/DATA_VGLL3_Scorff.R")
 attach(dataToJags)
@@ -62,17 +66,18 @@ col.sex<-c("lightgrey","darkgrey")
 
 nyears <- length(unique(dataToJags$year))
 
-nimble=FALSE
-jags=TRUE
+nimble=TRUE
+jags=FALSE
 
 
 # ---- DISTRIBUTIONS -----
 if(nimble){
   load("results/RESULTS_vgll3_scorff_nimble.RData")
-  stats <- MCMCpstr(samples, func = function(x) quantile(x, probs = c(0.025,0.5 ,0.975)))
+  #stats <- MCMCpstr(samples, func = function(x) quantile(x, probs = c(0.025,0.5 ,0.975)))
   mcmc <- do.call(rbind,samples)
   
   ## pool theta samples between the three chains
+  mu_theta <- mcmc[,grep("mu_theta", colnames(mcmc))]
   mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
   mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
   #mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
@@ -94,16 +99,36 @@ if(nimble){
   theta[,2,2] <- mu_alphaFemale + alpha2f
   theta[,3,2] <- mu_alphaFemale + alpha3f
   
+  eta <- mcmc[,c(paste0("eta[",1:dataToJags$N,"]"))]
+  etas <- mcmc[,c(paste0("eta[",1:dataToJags$N,"]"))]
+  thetas <- mcmc[,c(paste0("theta[",1:dataToJags$N,"]"))]
+  
+  thetas_means <- apply(thetas,2,mean)
+  etas_means <- apply(etas,2,mean)
   
   sigma2_alpha <- mcmc[,grep("sigma2_alpha", colnames(mcmc))]
   sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
   sigma2_res <- mcmc[,grep("sigma2_res", colnames(mcmc))]
   
+  # Creating a 3D array sigma2_res
+  sigma2_res <- array(sigma2_res, dim = c(nrow(sigma2_res), 3, 2))
+  sigma2_alpha <- array(sigma2_alpha, dim = c(nrow(sigma2_res), 3, 2))
+  sigma2_eta <- array(sigma2_eta, dim = c(nrow(sigma2_res), 3, 2))
+  
   mu_X <- mcmc[,grep("mu_X", colnames(mcmc))]
   quantiles_mu_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
-  colnames(quantiles_df) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
-  #sigma_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
-  #sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
+  colnames(quantiles_mu_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+   
+  sigma_X <- mcmc[,grep("sigma_X", colnames(mcmc))]
+  quantiles_sigma_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
+  colnames(quantiles_sigma_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+  
+  
+  ratio <- mcmc[,grep("ratio", colnames(mcmc))]
+  a <- mcmc[,c("a[1]","a[2]")]
+  k <- mcmc[,c("k[1]","k[2]")]
+  h2 <- mcmc[,c("h2[1]","h2[2]")]
+  
 }
 
 if(jags){
@@ -130,6 +155,13 @@ if(jags){
   theta[,2,2] <- mu_alphaFemale + alpha2f
   theta[,3,2] <- mu_alphaFemale + alpha3f
   
+  eta <- samples$BUGSoutput$sims.list$eta
+  thetas <- samples$BUGSoutput$sims.list$theta
+  etas <- (samples$BUGSoutput$sims.list$eta)
+  
+  thetas_means <- samples$BUGSoutput$mean$theta
+  etas_means <- samples$BUGSoutput$mean$eta
+  
   # alphas <- stats$alpha
   # mu_theta <- samples$BUGSoutput$median$mu_theta
   # 
@@ -141,11 +173,21 @@ if(jags){
   sigma2_alpha <- samples$BUGSoutput$sims.list$sigma2_alpha
   sigma2_eta <- samples$BUGSoutput$sims.list$sigma2_eta
   sigma2_res <- samples$BUGSoutput$sims.list$sigma2_res
+  
+  ratio <- samples$BUGSoutput$sims.list$ratio 
+  a <- samples$BUGSoutput$sims.list$a 
+  k <- samples$BUGSoutput$sims.list$k
+  h2 <- samples$BUGSoutput$sims.list$h2
 }
 
 
-
+if(nimble){
+pdf("results/FIGURES_VGLL3_Scorff_nimble.pdf")
+}else{
 pdf("results/FIGURES_VGLL3_Scorff_jags.pdf")
+}
+
+
 
 par(mfrow=c(2,2))
 # male
@@ -215,6 +257,8 @@ for (gene in 1:3){
 }
 
 
+id <-which(dataToJags$X>550)
+
 
 
 ### ETA
@@ -273,86 +317,72 @@ for (j in 1:3){
 
 
 ## REACTION NORMS
-#par(mfrow=c(1,2))
-X.sim = seq(200,600,10)
-X.pred <- (X.sim-mean(X))/sd(X) #scale(new.df$X, center = TRUE, scale = TRUE))
-
-X.obs <- seq(min(X), max(X), 10)
-X.obsc <- (X.obs-mean(X))/sd(X)
-
-p.pred=array(,dim=c(length(X.pred), 3, 2))
-p.obs=array(,dim=c(length(X.obs), 3, 2))
-#mu_alphas <- samples$BUGSoutput$median$mu_alpha
-#alphas <- samples$BUGSoutput$median$alpha
-#sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
-#sigma2_THETA <- samples$BUGSoutput$median$sigma2_THETA
-
-#thetas <- mu_alphas + alphas
-
-#p[,1,1] <- pnorm((X.pred - alphas[1,1])/ (sigma_eta + sqrt(sigma2_THETA[1,1])))
-
-#for (i in 1:length(X.pred)){
-
-mu_X <- samples$BUGSoutput$median$mu_X
-sigma_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
-sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
-
-
-
-for (i in 1:3){
+compute_reaction_norms <- function(mcmc, X, sigma2_eta, theta) {
+  # Define X.sim and X.obs
+  X.sim <- seq(200, 600, 10)
+  X.pred <- scale(X.sim, center = mean(X), scale = sd(X))
+  X.obs <- seq(min(X), max(X), 10)
+  X.obsc <- scale(X.obs, center = mean(X), scale = sd(X))
+  
+  # Initialize arrays
+  p.pred <- array(NA, dim = c(length(X.pred), 3, 2))
+  p.obs <- array(NA, dim = c(length(X.obs), 3, 2))
+  
+  if(nimble){
+    # Compute quantiles for mu_X
+    mu_X <- mcmc[, grep("mu_X", colnames(mcmc))]
+    quantiles_mu_X <- apply(mu_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
+    mu_X <- matrix(quantiles_mu_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
+    
+    # Compute quantiles for sigma_X
+    sigma_X <- sqrt(mcmc[, grep("sigma2_X", colnames(mcmc))])
+    quantiles_sigma_X <- apply(sigma_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
+    sigma_X <- matrix(quantiles_sigma_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
+    
+    # Compute median sigma2_eta
+    sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
+    sigma2_eta_med <- apply(sigma2_eta, 2, quantile, probs = c(0.05, 0.5, 0.95))
+  }else{
+    mu_X <- samples$BUGSoutput$median$mu_X
+    sigma_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
+    sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
+  }
+  
+  for (i in 1:3) {
+    for (j in 1:2) {
+      
+      theta_med <- apply(theta[,,j], 2, quantile, probs = c(0.05, 0.5, 0.95))
+      sigma2_eta_idx <- i + (j - 1) * 3
+      
+      X.scaled <- (X.sim - mu_X[i, j]) / sigma_X[i, j]
+      z_pred <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
+        sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
+      
+      X.scaled <- (X.obs - mu_X[i, j]) / sigma_X[i, j]
+      z_obs <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
+        sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
+      
+      #if (j == 1) {
+      p.pred[, i, j] <- pnorm(z_pred)
+      #} else {
+      p.obs[, i, j] <- pnorm(z_obs)
+    }
+  }
   
   
-  
-  #z[i]<-(((X.scaled) / sqrt(sigma2_eta[g[i],sex[i]] + 1)) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + 1))
-  #z[i]<-(((X[i]-mu_X[g[i],sex[i]]) / sqrt(sigma2_eta[g[i],sex[i]] + sigma2_X[g[i],sex[i]])) - theta[i]) / sqrt(sigma2_eta[g[i],sex[i]]/(sigma2_eta[g[i],sex[i]] + sigma2_X[g[i],sex[i]]))
-  
-  X.scaled <- (X.sim-mu_X[i,1])/sigma_X[i,1]
-  theta_med <- (apply(theta[,,1], 2, quantile, probs=0.5))
-  z <- (((X.scaled) / sqrt(sigma2_eta[i,1] + 1)) - theta_med[i]) / sqrt(sigma2_eta[i,1]/(sigma2_eta[i,1] + 1))
-  tmp <- pnorm(z)
-  #tmp <- pnorm( (((X.sim - mu_X[i,1])/sqrt(sigma2_eta[i,1] + sigma2_X[i,1])) - (apply(theta[,,1], 2, quantile, probs=0.5)[i])) / sqrt(sigma2_eta[i,1] / (sigma2_eta[i,1] + sigma2_X[i,1])) )
-  p.pred[, i, 1] <- as.vector(tmp)
-  
-  X.scaled <- (X.obs-mu_X[i,1])/sigma_X[i,1]
-  theta_med <- (apply(theta[,,1], 2, quantile, probs=0.5))
-  z <- (((X.scaled) / sqrt(sigma2_eta[i,1] + 1)) - theta_med[i]) / sqrt(sigma2_eta[i,1]/(sigma2_eta[i,1] + 1))
-  tmp <- pnorm(z)
-  #tmp <- pnorm( (((X.obs - mu_X[i,1])/sqrt(sigma2_eta[i,1] + sigma2_X[i,1])) - (apply(theta[,,1], 2, quantile, probs=0.5)[i])) / sqrt(sigma2_eta[i,1] / (sigma2_eta[i,1] + sigma2_X[i,1])) )
-  p.obs[, i, 1] <- as.vector(tmp)
-  
-  
-  X.scaled <- (X.sim-mu_X[i,2])/sigma_X[i,2]
-  theta_med <- (apply(theta[,,2], 2, quantile, probs=0.5))
-  z <- (((X.scaled) / sqrt(sigma2_eta[i,2] + 1)) - theta_med[i]) / sqrt(sigma2_eta[i,2]/(sigma2_eta[i,2] + 1))
-  tmp <- pnorm(z)
-  #tmp <- pnorm( (((X.sim - mu_X[i,2])/sqrt(sigma2_eta[i,2] + sigma2_X[i,2])) - (apply(theta[,,2], 2, quantile, probs=0.5)[i])) / sqrt(sigma2_eta[i,2] / (sigma2_eta[i,2] + sigma2_X[i,2])) )
-  p.pred[, i, 2] <- as.vector(tmp)
-  
-  X.scaled <- (X.obs-mu_X[i,2])/sigma_X[i,2]
-  theta_med <- (apply(theta[,,2], 2, quantile, probs=0.5))
-  z <- (((X.scaled) / sqrt(sigma2_eta[i,2] + 1)) - theta_med[i]) / sqrt(sigma2_eta[i,2]/(sigma2_eta[i,2] + 1))
-  tmp <- pnorm(z)
-  #tmp <- pnorm( (((X.obs - mu_X[i,2])/sqrt(sigma2_eta[i,2] + sigma2_X[i,2])) - (apply(theta[,,2], 2, quantile, probs=0.5)[i])) / sqrt(sigma2_eta[i,2] / (sigma2_eta[i,2] + sigma2_X[i,2])) )
-  p.obs[, i, 2] <- as.vector(tmp)
-  
-  
-  # tmp <- pnorm((X.pred - (apply(theta[,,1], 2, quantile, probs=0.5)[i]))/ ( sqrt(apply(sigma2_eta, 2, quantile, probs=0.5)[1]) + sqrt(apply(sigma2_THETA[,,1], 2, quantile, probs=0.5)[i])))
-  # p.pred[, i, 1] <- as.vector(tmp)
-  # 
-  # tmp <- pnorm((X.obsc - (apply(theta[,,1], 2, quantile, probs=0.5)[i]))/ ( sqrt(apply(sigma2_eta, 2, quantile, probs=0.5)[1]) + sqrt(apply(sigma2_THETA[,,1], 2, quantile, probs=0.5)[i])))
-  # p.obs[, i, 1] <- as.vector(tmp)
-  # 
-  # 
-  # tmp <- pnorm((X.pred - (apply(theta[,,2], 2, quantile, probs=0.5)[i]))/ ( sqrt(apply(sigma2_eta, 2, quantile, probs=0.5)[2]) + sqrt(apply(sigma2_THETA[,,2], 2, quantile, probs=0.5)[i])))
-  # p.pred[, i, 2] <- as.vector(tmp)
-  # 
-  # tmp <- pnorm((X.obsc - (apply(theta[,,2], 2, quantile, probs=0.5)[i]))/ ( sqrt(apply(sigma2_eta, 2, quantile, probs=0.5)[2]) + sqrt(apply(sigma2_THETA[,,2], 2, quantile, probs=0.5)[i])))
-  # p.obs[, i, 2] <- as.vector(tmp)
+  return(list(p.pred = p.pred, p.obs = p.obs, X.sim=X.sim, X.pred=X.pred, X.obsc=X.obsc))
 }
 
+result <- compute_reaction_norms(mcmc, X, sigma2_eta, theta)
+
+X.sim <- result$X.sim
+p.pred <- result$p.pred
+X.pred <- result$X.pred
+X.obsc <- result$X.obsc
+p.obs <- result$p.obs
 
 
-
+#par(mfrow=c(1,2))
 
 hist((dataToJags$X[dataToJags$sex==1] - mean(dataToJags$X))/sd(dataToJags$X)
      , xlim=range(X.pred)
@@ -363,7 +393,7 @@ hist((dataToJags$X[dataToJags$sex==1] - mean(dataToJags$X))/sd(dataToJags$X)
 
 # prepare graphics to add second plot
 par(new = TRUE)
-#par(mfrow=c(1,2))
+
 ylab="Maturation probability at 1SW"
 plot(NULL, xlim=range(X.pred),ylim=c(0,1)
      , xaxt='n'
@@ -488,8 +518,14 @@ for (j in 1:3){
 
 
 
-par(mfrow=c(1,2))
-ratio <- samples$BUGSoutput$sims.list$ratio
+par(mfrow=c(1,3))
+
+
+if(nimble){ratio <- mcmc[,grep("ratio", colnames(mcmc))]}else{
+  ratio <- samples$BUGSoutput$sims.list$ratio 
+}
+
+
 plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution proximate cue to environmental variance",xaxt="n",main="Environment")
 #axis(1, at=c(1.5,3.5),labels=c("Envir", "Genetic"),las=2)
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
@@ -513,6 +549,39 @@ for (j in 3:4){
   text(j-2,apply(1-ratio, 2, quantile, probs=0.99)[j]+1,female,col="black")
 }
   
+# Contribution total variance = Percentages of the total phenotypic variance
+#h2 <- samples$BUGSoutput$sims.list$h2
+#h2 <- mcmc[,paste0("h2[",1:2,"]")]
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Genetic contribution to total variance (h2)",xaxt="n",main="Heritability")
+axis(1, at=1:2
+     ,labels=c(male, female))
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+for (j in 1:2){
+  segments(j, apply(h2, 2, quantile, probs=0.025)[j],j, apply(h2, 2, quantile, probs=0.975)[j],col=1)
+  segments(j, apply(h2, 2, quantile, probs=0.25)[j],j, apply(h2, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+  points(j,apply(h2, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+  #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+}
+
+
+# #h <- samples$BUGSoutput$sims.list$h
+# h <- mcmc[,paste0("h[",c(1,3,4,5),"]")]
+# plot(NULL, xlim=c(0,5),ylim=c(0,1),xlab="", ylab="Total variance contribution",xaxt="n")
+# axis(1, at=1:4
+#      ,labels=c("GENETIC", "SEX","VGLL3","Residual")#,"ENV")
+#      ,las=2)
+# #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+# #for (j in 1:5){
+# i=0
+# for (j in 1:4){
+#   i=i+1
+#   segments(j, apply(h, 2, quantile, probs=0.025)[j],j, apply(h, 2, quantile, probs=0.975)[j],col=1)
+#   segments(j, apply(h, 2, quantile, probs=0.25)[j],j, apply(h, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+#   points(j,apply(h, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+#   #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+# }
+
+
 
 # sigma2_eta <- samples$BUGSoutput$sims.list$sigma2_eta
 # plot(NULL, xlim=c(0,4),ylim=c(0,15),xlab="Genotype", ylab="Variances of proximate cue",xaxt="n")
@@ -564,8 +633,8 @@ for (j in 1:2){
 #am <- c(samples$chain1[,"a[1]"], samples$chain2[,"a[1]"],samples$chain3[,"a[1]"])
 #af <- c(samples$chain1[,"a[2]"], samples$chain2[,"a[2]"],samples$chain3[,"a[2]"])
 #a <- cbind(am,af)
-a <- samples$BUGSoutput$sims.list$a
-plot(NULL, xlim=c(0,3),ylim=range(a),xlab="Sex", ylab="Genotypic value",xaxt="n")
+#a <- samples$BUGSoutput$sims.list$a
+plot(NULL, xlim=c(0,3),ylim=c(0,4),xlab="Sex", ylab="Genotypic value",xaxt="n")
 axis(1, at=1:2,labels=c(male, female))
 #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
 #abline(h=mu_alphas[1],lty=3,col="lightgrey");text(4,mu_alphas[1]+1,male,col="lightgrey")
@@ -584,7 +653,7 @@ for (j in 1:2){
 # km <- c(samples$chain1[,"k[1]"], samples$chain2[,"k[1]"],samples$chain3[,"k[1]"])
 # kf <- c(samples$chain1[,"k[2]"], samples$chain2[,"k[2]"],samples$chain3[,"k[2]"])
 # k <- cbind(km,kf)
-k <- samples$BUGSoutput$sims.list$k
+#k <- samples$BUGSoutput$sims.list$k
 plot(NULL, xlim=c(0,3),ylim=range(k),xlab="Sex", ylab="Dominance deviation (scaled)",xaxt="n")
 axis(1, at=1:2,labels=c(male, female))
 #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
@@ -601,39 +670,6 @@ for (j in 1:2){
 #dev.off()
 
 
-
-# Contribution total variance = Percentages of the total phenotypic variance
-#h2 <- samples$BUGSoutput$sims.list$h2
-h2 <- mcmc[,paste0("h2[",1:2,"]")]
-
-plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Total variance contribution (h2)",xaxt="n")
-axis(1, at=1:2
-     ,labels=c(male, female))
-#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
-for (j in 1:2){
-  segments(j, apply(h2, 2, quantile, probs=0.025)[j],j, apply(h2, 2, quantile, probs=0.975)[j],col=1)
-  segments(j, apply(h2, 2, quantile, probs=0.25)[j],j, apply(h2, 2, quantile, probs=0.75)[j],col=1,lwd=2)
-  points(j,apply(h2, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
-  #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
-}
-
-
-# #h <- samples$BUGSoutput$sims.list$h
-# h <- mcmc[,paste0("h[",c(1,3,4,5),"]")]
-# plot(NULL, xlim=c(0,5),ylim=c(0,1),xlab="", ylab="Total variance contribution",xaxt="n")
-# axis(1, at=1:4
-#      ,labels=c("GENETIC", "SEX","VGLL3","Residual")#,"ENV")
-#      ,las=2)
-# #legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
-# #for (j in 1:5){
-# i=0
-# for (j in 1:4){
-#   i=i+1
-#   segments(j, apply(h, 2, quantile, probs=0.025)[j],j, apply(h, 2, quantile, probs=0.975)[j],col=1)
-#   segments(j, apply(h, 2, quantile, probs=0.25)[j],j, apply(h, 2, quantile, probs=0.75)[j],col=1,lwd=2)
-#   points(j,apply(h, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
-#   #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
-# }
 
 
 
@@ -678,11 +714,16 @@ for (j in 1:2){
 # }
 
 #eta <- samples$BUGSoutput$median$eta
-eta <- samples$BUGSoutput$sims.list$eta
+#eta <- samples$BUGSoutput$sims.list$eta
 #X.scaled <- (X-mean(X))/sd(X)
+
+
+
+mu_X_med <- array(quantiles_mu_X[,"50%"],dim=c(3,2))
+sigma_X_med <- array(quantiles_sigma_X[,"50%"],dim=c(3,2))
 X.scaled=NULL
 for (i in 1: length(X)){
-  X.scaled[i] <- (X[i]-mu_X[dataToJags$g[i],dataToJags$sex[i]])/sigma_X[dataToJags$g[i],dataToJags$sex[i]]
+  X.scaled[i] <- (X[i]-mu_X_med[dataToJags$g[i],dataToJags$sex[i]])/sigma_X_med[dataToJags$g[i],dataToJags$sex[i]]
 }
 
 
@@ -796,7 +837,7 @@ par(mfrow=c(2,2))
 for (x in 1:2){
 
 smp=sample(1000:nrow(etas),1,replace=FALSE)  
-plot(NULL,xlim=c(-5,5),ylim=c(-5,5),xlab="Proximate cue",ylab="Threshold", main=paste0("Male (iteration: ", smp,")"))
+plot(NULL,xlim=c(-7,7),ylim=c(-7,7),xlab="Proximate cue",ylab="Threshold", main=paste0("Male (iteration: ", smp,")"))
 #legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex)
 legend("topright", legend=c("EE", "EL", "LL"),pch=1:3, bty="n")
 for (gen in 1:3){
@@ -845,6 +886,10 @@ par(mfcol=c(1,3))
 
 ylim=c(-5,5)
 xlim=c(-0.7,0.7)
+smp=sample(1:nrow(etas),10,replace=FALSE)
+smp.etas <- smp.thetas <- NULL
+smp.etas <- etas[smp,]  
+smp.thetas <- thetas[smp,] 
 
 for (gene in 1:3){
   
@@ -1001,8 +1046,8 @@ for (gene in 1:3){
 
 #load("~/Documents/RESEARCH/PROJECTS/LETM/VGLL3/results/vgll3_scorff_jags.RData")
 
-thetas <- samples$BUGSoutput$sims.list$theta
-etas <- (samples$BUGSoutput$sims.list$eta)
+#thetas <- samples$BUGSoutput$sims.list$theta
+#etas <- (samples$BUGSoutput$sims.list$eta)
 
 #thetas_male <- thetas[,sex==1]
 #thetas_female <- thetas[,sex==2]
@@ -1067,8 +1112,6 @@ etas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.025,0.25, 0
 #   }
 # }
 
-thetas_means <- samples$BUGSoutput$mean$theta
-etas_means <- samples$BUGSoutput$mean$eta
 thetas_means_ind=etas_means_ind=array(,dim=c(dataToJags$N,nyears,2))
 for (s in 1:2){
   for (y in 1993:2016){
@@ -1228,6 +1271,7 @@ xfit=seq(from=min(x),to=max(x),length.out=30)
 yfit1=predict(mod1,newdata=xfit)
 points(xfit,yfit1,type="l",lwd=2,col=2)
 
+legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
 
 
 
@@ -1363,6 +1407,7 @@ P <- array(,dim=c(2,nyears))
 P[1,] <- q[1,]*p_1SW*p_male_1SW + q[1,]*(1-p_1SW)*p_male_MSW
 P[2,] <- q[2,]*p_1SW*p_female_1SW + q[2,]*(1-p_1SW)*p_female_MSW
 
+col.sex=c(1,2)
 par(mfcol=c(1,1))
 plot(NULL,xlim=c(min(years),max(years)),ylim=c(0,.3),xlab="",ylab="Allele L frequencies")
 for (s in 1:2){
