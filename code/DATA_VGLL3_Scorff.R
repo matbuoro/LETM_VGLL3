@@ -11,8 +11,8 @@ load("data/data_vgll3.rdata")
 new.df <- na.omit(df)
 
 # remove year 1985 (only 1 female) and last year (no MSW)
-new.df <- subset(new.df, !(t %in% c(1985, 2017)))
-
+#new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
+new.df <- subset(new.df, t>1987 & t<2017)
 
 #attach(new.df)
 
@@ -113,7 +113,7 @@ for (i in 1:nrow(new.df)){
 #X.scaled <- (X-mean(X))/sd(X) #scale(new.df$X, center = TRUE, scale = TRUE))
 
 ## Data used for inference in jags
-dataToJags <- list(
+data <- list(
   N=nrow(new.df) # total number of fish
   , Y=new.df$Y-1 # maturation decision: 1 for 1SW, 0 otherwise
   , X=new.df$X # Observable cue, i.e growth centre/reduit
@@ -123,7 +123,7 @@ dataToJags <- list(
   , g=as.numeric(new.df$g) # genotypes: 1 for EE, 2 for EL and 3 for LL
   #, n=n # number of fish per genotype (row) and sex (col)
   , year = new.df$t# - (min(new.df$t)-1)
-  , period = new.df$period # after 2004
+  #, period = new.df$period # after 2004
   ,freq = mat[,,1]+mat[,,2]
   #,p=p,q=1-p
 )

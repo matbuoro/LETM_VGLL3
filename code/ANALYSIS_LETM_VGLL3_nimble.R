@@ -12,19 +12,19 @@ library(writexl)
 
 # DATA ####
 source("code/DATA_VGLL3_Scorff.R")
-#attach(dataToJags)
-#str(dataToJags)
-dataToJags$X.scaled <- NULL
-dataToNimble <- list(Y=dataToJags$Y, X=dataToJags$X)
-constants <- list(N=dataToJags$N
-                  #, X= dataToJags$X
-                  #, mean.X=dataToJags$mean.X
-                  #, sd.X=dataToJags$sd.X
-                  , sex=dataToJags$sex
-                  #, n=dataToJags$n
-                  , g=dataToJags$g
-                  #, year=dataToJags$year
-                  , freq=dataToJags$freq
+#attach(data)
+#str(data)
+data$X.scaled <- NULL
+dataToNimble <- list(Y=data$Y, X=data$X)
+constants <- list(N=data$N
+                  #, X= data$X
+                  #, mean.X=data$mean.X
+                  #, sd.X=data$sd.X
+                  , sex=data$sex
+                  #, n=data$n
+                  , g=data$g
+                  #, year=data$year
+                  , freq=data$freq
 )
 
 
@@ -103,51 +103,21 @@ LETM <- nimbleCode({
     delta_k <- k[1] - k[2] 
     
     
-    # Prior for frequencies using Dirichlet distribution
-    # for (i in 1:2) {
-    #   for (j in 1:2) {
-    #     freq[1:3,i,j] ~ ddirch(alpha[1:3,i,j])
-    #   }
-    # }
-    
     # residual variance of the latent threshold
     for (s in 1:2){
       
-      #sigma2_e[s] <- sigma2_eta[s]/(sigma2_eta[s] + sigma2_X)
-      
-      # Sex variance
-      #p_sex[s] <- sum(n[1:3,s])/N # female
-      #sigma2_sex[s] <- (pow(mu_theta[s] - (mu_theta[1]+p_sex[2]*delta_theta),2))*p_sex[s] # variance sex
-      
-      #mu_alpha[s] <- (a[s]*(-n[1,s]+k[s]*n[2,s]+n[3,s]))/sum(n[1:3,s])
-      mu_alpha[s] <- (a[s]*(-freq[1,s]+k[s]*freq[2,s]+freq[3,s]))
+     mu_alpha[s] <- (a[s]*(-freq[1,s]+k[s]*freq[2,s]+freq[3,s]))
       
       for (j in 1:3){
         
         # Genotype (VGLL3) x Sex variance
         #sigma2_alpha[j,s] <- pow(alpha[j,s] - mu_alpha[s],2)*(n[j,s]/sum(n[1:3,s])) # variance genotype
         sigma2_alpha[j,s] <- pow(alpha[j,s] - mu_alpha[s],2)*(freq[j,s]) # variance genotype
-        
-        # Residual genetic variance
-        #sigma2_res[j,s] <- sigma_res[j,s]*sigma_res[j,s]
-        #sigma_res[j,s] <- chSq[s]/(nu+1)
-        #sigma2_res[j,s] <- sigma2_alpha[j,s]*(ratio[2]/(1-ratio[2]))
-        
-        # TOTAL thresholds variance
-        #sigma2_THETA[j,s] <- sigma2_alpha[j,s] + sigma2_res[j,s]#*(n[j,s]/sum(n[1:3,s])) # variance genetique ponderee = variance genotype/sex + residual variance
-        
+
       } # end loop j
-      #chSq[s]~dchisqr(nu+1) # male
-      # sigma2_ALPHA[s] <- sum(sigma2_alpha[1:3,s])
-      # sigma2_RES[s] <- sigma2_res[1,s]*(n[1,s]/sum(n[1:3,s])) + sigma2_res[2,s]*(n[2,s]/sum(n[1:3,s])) + sigma2_res[3,s]*(n[3,s]/sum(n[1:3,s]))
     } # end loop s
     #nu <- 2
-    #chSq[1]~dchisqr(nu+1) # male
-    #chSq[2] <- chSq[1]#*exp(delta_res) #female
-    #delta_res ~dnorm(0,0.001);T(-3,3)
-    #chSq.prior~dchisqr(nu+1)
-    
-    
+   
     for (j in 1:3){
       
       # Variance proximate cue
@@ -155,11 +125,7 @@ LETM <- nimbleCode({
       sigma2_eta[j,1] <- 1*(ratio[1]/(1-ratio[1])) # sigma2_Xscaled = 1
       sigma2_eta[j,2] <- 1*(ratio[2]/(1-ratio[2])) # sigma2_Xscaled = 1
       #sigma2_eta[j,2] <- sigma2_eta[j,1]
-      
-      
-      #sigma2_res[j,1] <- sigma2_alpha[j,1]*(ratio[2]/(1-ratio[2]))
-      #sigma2_res[j,2] <- sigma2_res[j,1] # same for sex
-      
+     
       # Hypothesis: same  residual  varoance by genotype and sex
       sigma2_res[j,1] <- sum(sigma2_alpha[1:3,1])*(ratio[3]/(1-ratio[3]))
       sigma2_res[j,2] <- sum(sigma2_alpha[1:3,2])*(ratio[4]/(1-ratio[4]))
@@ -168,19 +134,17 @@ LETM <- nimbleCode({
     }
     
     # Contribution of residual variances
-    ratio[1]~dbeta(3,3)
-    ratio[2]~dbeta(3,3)
-    ratio[3]~dbeta(3,3)
+    # ratio[1]~dbeta(3,3)
+    # ratio[2]~dbeta(3,3)
+    # ratio[3]~dbeta(3,3)
+    logit(ratio[1])~dnorm(0,1.5)
+    logit(ratio[2])~dnorm(0,1.5)
+    logit(ratio[3])~dnorm(0,1.5)
     ratio[4] <- ratio[3]
     #ratio[4]~dbeta(3,3)
     
-    #sigma2_eta[1] <- sigma2_X *(ratio[1]/(1-ratio[1]))
-    
-    #sigma2_eta[1] <- (sigma2_T[1] * (1-h2[1])) - 1 # var(X)=1
-    #sigma_eta <- sqrt(sigma2_eta)
     varE[1] <- 1# sigma2_eta[1] + 1#sum(sigma_X[1:3, 1])*(n[j,1]/sum(n[1:3,1])) # Variance environnemental
-    #h2[1] ~dbeta(1,1)
-    #sigma2_T[1] <- sigma2_G[1] / h2[1]
+
     sigma2_T[1] <- sigma2_G[1] + varE[1]
     sigma2_G[1] <-  sum(sigma2_alpha[1:3,1]) + sigma2_res[1,1] #sum(sigma2_THETA[1:3,1]) # variance genetic
     h2[1] <- sigma2_G[1] / sigma2_T[1]
@@ -195,10 +159,6 @@ LETM <- nimbleCode({
     
     
     for (s in 1:2){    # sex
-      # for (t in 1:2){
-      #   p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
-      #   q[s,t] <- 1 - p[s,t]
-      # }
       p[s] <- sum((2*freq[1,s])+(1*freq[1,s])+(0*freq[1,s]))/(2*sum(freq[1:3,s])) # population frequence allelic for E
       q[s] <- 1 - p[s]
       
@@ -210,6 +170,7 @@ LETM <- nimbleCode({
       
       # Heterozygosity at locus vgl3 in the case of Hardy-Weinberg equilibrium
       h[s] <- 2*p[s]*q[s]
+      He[s] <- 1-(pow(p[s],2)+ pow(q[s],2))
       
       #Population mean (for VGLL3)
       M[s] <- a[s]*(p[s]-q[s])+ (2*d[s]*p[s]*q[s])
@@ -260,7 +221,7 @@ parameters <- c(
   #,"sigma2_THETA"
   ,"h2","sigma2_T","sigma2_G"
   ,"theta","eta"
-  ,"gamma","M","h"
+  ,"gamma","M","h","He"
   #,"gap"
   #,"delta","delta_theta","delta_alpha"
   #,"mu_alpha"
@@ -283,8 +244,8 @@ parameters <- c(
 eta_inits <- theta_inits <- numeric(constants$N)
 for (i in 1:constants$N){
   eta_inits[i] <- rnorm(1,0,1)
-  if(dataToJags$Y[i]==1) theta_inits[i] <- eta_inits[i]-1
-  if(dataToJags$Y[i]==0) theta_inits[i] <- eta_inits[i]+1
+  if(data$Y[i]==1) theta_inits[i] <- eta_inits[i]-1
+  if(data$Y[i]==0) theta_inits[i] <- eta_inits[i]+1
 }
 
 inits <- function(){
@@ -294,18 +255,18 @@ inits <- function(){
     , a=c(3,1)#,delta_a=0
     , k=c(-1,0)#,delta_k=1
     , ratio=c(rep(0.5, 3),NA)
-    , mu_X=dataToJags$mean.X
-    , sigma_X=dataToJags$sd.X
+    , mu_X=data$mean.X
+    , sigma_X=data$sd.X
     , sig=30
   )
 }
 
 
 # RUN MCMC ####
-n_chains <- 3 # number of chains
+n_chains <- 2 # number of chains
 n_store <- 5000 # target of number of iteration to store per chain
 n_burnin <- 1000 # number of iterations to discard
-n_thin <- 10 # thinning interval
+n_thin <- 25 # thinning interval
 n_iter <- (n_store * n_thin) + n_burnin # number of iterations to run per chain
 print(n_iter)
 
@@ -353,7 +314,7 @@ end_time <- Sys.time()
 time_taken <- end_time - start_time
 print(time_taken)
 
-save(samples,time_taken, file="results/RESULTS_vgll3_scorff_nimble.RData")
+save(data,samples,time_taken, file="results/RESULTS_vgll3_scorff_nimble.RData")
 
 #write.csv2(samples$BUGSoutput$summary, file="results/Summary_2025.csv")
 

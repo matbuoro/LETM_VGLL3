@@ -1,0 +1,166 @@
+---
+title: "VGLL3"
+author: "mbuoro"
+date: "2025-03-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+load("data/data_vgll3.rdata")
+new.df <- na.omit(df)
+
+colnames(new.df)<-c("Y","Size","Sex","Genotype","Year","Id")
+
+# remove year 1985 (only 1 female) and last year (no MSW)
+new.df <- subset(new.df, !(Year %in% c(1985, 2017)))
+
+
+#attach(new.df)
+
+# Genotype=as.numeric(new.df$Genotype)
+# Sex=as.numeric(new.df$Sex)
+#new.df$year = new.df$t
+new.df$Y = new.df$Y + 1 # 1 for 1SW, 2 for MSW
+
+
+
+# Number of fish by genotype and Sex:
+#new.df$period <- ifelse(new.df$t<2005,1,2) # after 2004
+#tmp <- aggregate(Size~Genotype+Sex+period, data=new.df, FUN=length)
+##n <- xtabs( Size ~ Genotype+Sex+period, tmp) # convert dataframe to matrix
+
+tmp <- aggregate(Size~Genotype+Sex+Y, data=new.df, FUN=length)
+counts <- xtabs( Size ~ Genotype+Sex+Y, tmp) # convert dataframe to matrix
+
+library(knitr)
+# Convert to a data frame for better formatting
+df_counts <- as.data.frame.table(counts)
+
+# Reshape the data for a cleaner table
+library(tidyr)
+df_wide <- pivot_wider(df_counts, names_from = c(Sex, Y), values_from = Freq)
+
+# Rename columns
+colnames(df_wide) <- c("genotype", "Male (1SW)", "Female (1SW)", "Male (MSW)", "Female (MSW)")
+
+# Print the table
+kable(df_wide, caption = "# samples by Sex and genotype")
+
+
+tmp <- aggregate(Size~Genotype+Sex+Y+Year, data=new.df, FUN=length)
+counts <- xtabs( Size ~ Genotype+Sex+Y+Year, tmp) # convert dataframe to matrix
+
+library(knitr)
+# Convert to a data frame for better formatting
+df_counts <- as.data.frame.table(counts)
+
+# Reshape the data for a cleaner table
+library(tidyr)
+df_wide <- pivot_wider(df_counts, names_from = c(Sex, Y), values_from = Freq)
+# Rename columns
+colnames(df_wide) <- c("genotype","Year", "Male (1SW)", "Female (1SW)", "Male (MSW)", "Female (MSW)")
+# Print the table
+kable(df_wide, caption = "# samples by Sex and genotype")
+
+
+```
+
+```{r pressure, echo=FALSE}
+
+# Convert xtabs to array
+counts <- aperm(array(counts, dim = c(3, 2, 2)), c(1, 2, 3))
+
+freqs <- array(,dim=c(3,2,2))
+for (i in 1:2) {
+  for (j in 1:2) {
+    for (k in 1:3){
+      freqs[k,i,j] <- counts[k,i,j]/sum(counts[1:3,i,j])
+    }
+  }
+}
+
+## Load proportion of males by age at sea (1SW vs MSW, and by year)
+load("data/p_male_Scorff.Rdata")
+p_male_1SW <- mean(p_male_1SW[,"50%"])
+p_female_1SW <- 1-p_male_1SW
+p_male_MSW <- mean(p_male_MSW[,"50%"])
+p_female_MSW <- 1-p_male_MSW
+
+
+# loading coda
+#load(paste('results/Results_',stade,"_",year,'.RData',sep=""))
+#fit.mcmc <- as.mcmc(fit$sims.matrix) # using bugs
+#n1SW <- as.matrix(fit.mcmc[,paste0("n_1SW[",1:data$Y,"]")])
+#ntot <- as.matrix(fit.mcmc[,paste0("n_tot[",1:data$Y,"]")])
+p_1SW <- 0.86 #median(n1SW/ntot)
+
+
+mat <- array(,dim=c(3,2,2))
+mat[,1,1]<- freqs[1:3,1,1]* p_1SW * p_male_1SW
+mat[,2,1] <- freqs[1:3,2,1]* p_1SW * p_female_1SW
+mat[,1,2]<- freqs[1:3,1,2]* (1-p_1SW) * p_male_MSW
+mat[,2,2] <- freqs[1:3,2,2]* (1-p_1SW) * p_female_MSW
+
+sum(mat) # should be 1!
+mat
+
+# # Reshape the data for a cleaner table
+# library(tidyr)
+# df_mat <- as.data.frame.table(mat)
+# df_wide <- pivot_wider(df_mat, names_from = c(Sex, Y), values_from = Freq)
+# 
+# # Rename columns
+# colnames(df_wide) <- c("genotype", "Male (1SW)", "Female (1SW)", "Male (MSW)", "Female (MSW)")
+# 
+# # Print the table
+# kable(df_wide, caption = "# samples by Sex and genotype")
+```
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(new.df, aes(Size = factor(Genotype), y = Size, fill = factor(Sex))) + geom_boxplot(alpha = 0.7) + labs(title = "Distribution of Size by Genotype and Sex", Size = "Genotype", y = "Size", fill = "Sex") + theme_minimal()
+
+
+ggplot(new.df, aes(x = Year, y = Size, color = factor(Sex), group = Sex)) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
+  stat_summary(fun = mean, geom = "point", size = 2) +
+  labs(title = "Mean Size by Year and Sex",
+       Size = "Year",
+       y = "Mean Size",
+       color = "Sex") +
+  scale_color_manual(values = c("1" = 1, "2" = 2),labels = c("1" = "Male", "2" = "Female")) +
+  theme_minimal()
+
+
+
+ggplot(new.df, aes(x = Year, y = Size, color = factor(Genotype), group = Genotype)) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
+  stat_summary(fun = mean, geom = "point", size = 2) +
+  labs(title = "Mean Size by Year and Genotype (Genotype)",
+       Size = "Year",
+       y = "Mean Size",
+       color = "Genotype (Genotype)") +
+  theme_minimal()
+
+
+ggplot(new.df, aes(x = Year, y = Size, color = factor(Sex), group = Sex)) +
+  stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
+  stat_summary(fun = mean, geom = "point", size = 2) +
+  facet_wrap(~ Y) +
+  labs(title = "Mean Size by Year, Sex, and Y",
+       Size = "Year",
+       y = "Mean Size",
+       color = "Sex") +theme_minimal()
+
+
+
+
+
+plot(NULL,xlim=c(1986,2016),ylim=range(new.df$Size), ylab="Size", xlab="")
+points(new.df$Year,new.df$Size,col=new.df$Sex, pch=16)
+```

@@ -139,8 +139,8 @@ inits <- function(){
     , a=c(3,1)#,delta_a=0
     , k=c(-1,0)#,delta_k=1
     , ratio=c(rep(0.5, 3),NA)
-    , mu_X=dataToJags$mean.X
-    , sigma_X=dataToJags$sd.X
+    , mu_X=mean.X
+    , sigma_X=sd.X
     , sig=30
   )
 }
@@ -160,12 +160,12 @@ data <- list(N=dataToJags$N
 samples <- jags.parallel(data=data,  
                          model.file = LETM,
                          parameters.to.save = parameters,  
-                         n.chains = 3,  # Number of chains to run.
+                         n.chains = 2,  # Number of chains to run.
                          inits = inits,  # initial values for hyperparameters
-                         n.iter = 5000*100,    # n.store * n.thin
+                         n.iter = 5000*5,    # n.store * n.thin
                          n.burnin = 1000,   # discard first X iterations
-                         n.thin = 100,
-                         n.cluster= 3
+                         n.thin = 5,
+                         n.cluster= 2
 ) # seep every X iterations
 # End time measurement
 end_time <- Sys.time()
