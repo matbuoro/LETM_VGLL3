@@ -1067,17 +1067,18 @@ etas_medians_all=array(,dim=c(5, nyears));rownames(etas_medians_all)<-c("2.5%","
   # }              
   # }
 
-
+years <- sort(unique(dataToJags$year))
+nyears <- length(unique(dataToJags$year))
 etas_means_all=array(,dim=c(5, nyears));rownames(etas_means_all)<-c("2.5%","25%","50%","75%","97.5%")
-colnames(etas_means_all)<-min(dataToJags$year):max(dataToJags$year)
+colnames(etas_means_all)<-years
 
 thetas_means_male=array(,dim=c(5, nyears))
 rownames(thetas_means_male)<-c("2.5%","25%","50%","75%","97.5%")
-colnames(thetas_means_male)<-min(dataToJags$year):max(dataToJags$year)
+colnames(thetas_means_male)<-years
 thetas_means_female=etas_means_female=etas_means_male=thetas_means_male
 
 j=0
-for (y in min(dataToJags$year):max(dataToJags$year)){
+for (y in years){
   j=j+1
   #print(j)
   tmp=NULL
@@ -1114,12 +1115,12 @@ etas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.025,0.25, 0
 
 thetas_means_ind=etas_means_ind=array(,dim=c(dataToJags$N,nyears,2))
 for (s in 1:2){
-  for (y in 1993:2016){
+  for (y in years){
     tmp <- thetas_means[sex==s & year==y]
-    thetas_means_ind[1:length(tmp),y-1992,s] <- tmp
+    thetas_means_ind[1:length(tmp),y-1985,s] <- tmp
     tmp=NULL
     tmp <- etas_means[sex==s & year==y]
-    etas_means_ind[1:length(tmp),y-1992,s] <- tmp
+    etas_means_ind[1:length(tmp),y-1985,s] <- tmp
   }
 }
 
@@ -1172,7 +1173,7 @@ for (s in 1:2){
 par(mfcol=c(1,2))
 range_years <- as.numeric(colnames(etas_means_all))
 plot(NULL, xlim=range(range_years),ylim=c(-3,3), ylab="Proximate cue",xlab="")
-rect(xleft = 1986, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
+rect(xleft = 1985, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
 rect(xleft = 2005, xright = 2016, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
 
 segments(range_years-.1,etas_means_all["2.5%",], range_years-.1,etas_means_all["97.5%",] ,col=1)
@@ -1287,7 +1288,7 @@ legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
 
 par(mfcol=c(1,3))
 plot(thetas_means_male["50%",],thetas_means_female["50%",],pch="", xlab="MALE",ylab="FEMALE", main="Tresholds (medians)")
-text(thetas_means_male["50%",],thetas_means_female["50%",], 1993:2016)
+text(thetas_means_male["50%",],thetas_means_female["50%",], 1986:2016)
 # Compute correlation
 cor_result <- cor.test(thetas_means_male["50%",], thetas_means_female["50%",])
 
@@ -1305,7 +1306,7 @@ text(x=min(thetas_means_male["50%",]),
 
 
 plot(etas_means_all["50%",],thetas_means_male["50%",],pch="", xlab="eta",ylab="theta", main="MALE")
-text(etas_means_all["50%",],thetas_means_male["50%",], 1993:2016)
+text(etas_means_all["50%",],thetas_means_male["50%",], 1986:2016)
 # Compute correlation
 cor_result <- cor.test(etas_means_all["50%",], thetas_means_male["50%",])
 # Extract correlation estimate (r) and p-value
@@ -1319,7 +1320,7 @@ text(x=min(etas_means_all["50%",]),
 
 
 plot(etas_means_all["50%",],thetas_means_female["50%",],pch="", xlab="eta",ylab="theta", main="FEMALE")
-text(etas_means_all["50%",],thetas_means_female["50%",], 1993:2016)
+text(etas_means_all["50%",],thetas_means_female["50%",], 1986:2016)
 # Compute correlation
 cor_result <- cor.test(etas_means_all["50%",], thetas_means_female["50%",])
 # Extract correlation estimate (r) and p-value
@@ -1338,7 +1339,7 @@ text(x=min(etas_means_all["50%",]),
 par(mfcol=c(1,1))
 plot(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears], xlim=c(-1,1), ylim=c(-3.5,2), pch="",main="Male (black) / Female (red)", xlab="Proximate cues",ylab="Thresholds")
 points(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears], pch="")
-text(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears],1993:2016,cex=0.75)
+text(etas_means_male["50%",1:nyears],thetas_means_male["50%",1:nyears],1986:2016,cex=0.75)
 # Compute correlation
 cor_result <- cor.test(etas_means_male["50%",], thetas_means_male["50%",])
 # Extract correlation estimate (r) and p-value
@@ -1352,7 +1353,7 @@ text(x=-1,
 
 #plot(etas_means_all["50%",1:nyears],thetas_means_female["50%",1:nyears], xlim=c(-1,1), ylim=c(-0.5,2), pch="",main="Female", xlab="Proximate cues",ylab="Thresholds")
 points(etas_means_female["50%",1:nyears],thetas_means_female["50%",1:nyears], pch="")
-text(etas_means_female["50%",1:nyears],thetas_means_female["50%",1:nyears],1993:2016,cex=0.75,col="tomato")
+text(etas_means_female["50%",1:nyears],thetas_means_female["50%",1:nyears],1986:2016,cex=0.75,col="tomato")
 # Compute correlation
 cor_result <- cor.test(etas_means_female["50%",], thetas_means_female["50%",])
 # Extract correlation estimate (r) and p-value
@@ -1372,8 +1373,42 @@ text(x=-1,
 
 
 
+
+
+par(mfcol=c(1,1))
+plot(P[1,9:(nyears-1)],thetas_means_male["50%",], xlim=c(0, .3), ylim=c(-3.5,2), pch="",main="Male", xlab="Freq allele L",ylab="Thresholds")
+points(P[1,9:(nyears-1)],thetas_means_male["50%",], pch="")
+text(P[1,9:(nyears-1)],thetas_means_male["50%",],1986:2016,cex=0.75)
+# Compute correlation
+cor_result <- cor.test(P[1,9:(nyears-1)],thetas_means_male["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_male["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="black") 
+
+#plot(P[2,9:(nyears-1)],thetas_means_female["50%",], xlim=c(0, .3), ylim=c(-3,2), pch="", main="Female", xlab="Freq allele L",ylab="Thresholds")
+points(P[2,9:(nyears-1)],thetas_means_female["50%",], pch="")
+text(P[2,9:(nyears-1)],thetas_means_female["50%",],1986:2016,cex=0.75,col="tomato")
+# Compute correlation
+cor_result <- cor.test(P[2,9:(nyears-1)],thetas_means_female["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_female["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato") 
+
+
+
+
 #### ALLELE FREQUENCIES
-load("data/data_vgll3+year.rdata")
+load("data/data_vgll3.rdata")
 years<-sort(unique(df$t))
 nyears<-length(years)
 par(mfcol=c(1,1))
@@ -1420,40 +1455,6 @@ for (s in 1:2){
   points(years,P[s,],col=col.sex[s],pch=16)
 }
 legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele L frequencies")
-
-
-
-
-
-par(mfcol=c(1,1))
-plot(P[1,9:(nyears-1)],thetas_means_male["50%",], xlim=c(0, .3), ylim=c(-3.5,2), pch="",main="Male", xlab="Freq allele L",ylab="Thresholds")
-points(P[1,9:(nyears-1)],thetas_means_male["50%",], pch="")
-text(P[1,9:(nyears-1)],thetas_means_male["50%",],1993:2016,cex=0.75)
-# Compute correlation
-cor_result <- cor.test(P[1,9:(nyears-1)],thetas_means_male["50%",])
-# Extract correlation estimate (r) and p-value
-cor_value <- round(cor_result$estimate, 3)
-p_value <- signif(cor_result$p.value, 3)
-# Add correlation text to the plot (top-left corner)
-text(x=0, 
-     y=max(thetas_means_male["50%",])*0.95, 
-     labels=paste0("r = ", cor_value, "\np = ", p_value), 
-     pos=4, col="black") 
-
-#plot(P[2,9:(nyears-1)],thetas_means_female["50%",], xlim=c(0, .3), ylim=c(-3,2), pch="", main="Female", xlab="Freq allele L",ylab="Thresholds")
-points(P[2,9:(nyears-1)],thetas_means_female["50%",], pch="")
-text(P[2,9:(nyears-1)],thetas_means_female["50%",],1993:2016,cex=0.75,col="tomato")
-# Compute correlation
-cor_result <- cor.test(P[2,9:(nyears-1)],thetas_means_female["50%",])
-# Extract correlation estimate (r) and p-value
-cor_value <- round(cor_result$estimate, 3)
-p_value <- signif(cor_result$p.value, 3)
-# Add correlation text to the plot (top-left corner)
-text(x=0, 
-     y=max(thetas_means_female["50%",])*0.95, 
-     labels=paste0("r = ", cor_value, "\np = ", p_value), 
-     pos=4, col="tomato") 
-
 
 
 

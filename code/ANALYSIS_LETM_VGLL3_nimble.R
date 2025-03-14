@@ -311,40 +311,41 @@ print(n_iter)
 
 
 start_time <- Sys.time()
-  # samples <- nimbleMCMC(code = LETM,     # model code
-  #                           data = dataToNimble,                  # data
-  #                           constants =constants,        # constants
-  #                           inits = inits,          # initial values
-  #                           monitors = parameters,   # parameters to monitor
-  #                           WAIC=FALSE,                      #waic
-  #                           niter = n_iter,                  # nb iterations
-  #                           nburnin = n_burnin,              # length of the burn-in
-  #                           nchains = n_chains,              # nb of chains
-  #                           thin = n_thin,                   # thinning interval (default = 1)
-  #                           samplesAsCodaMCMC=T
-  # )             #coda
+
+  samples <- nimbleMCMC(code = LETM,     # model code
+                            data = dataToNimble,                  # data
+                            constants =constants,        # constants
+                            inits = inits,          # initial values
+                            monitors = parameters,   # parameters to monitor
+                            WAIC=FALSE,                      #waic
+                            niter = n_iter,                  # nb iterations
+                            nburnin = n_burnin,              # length of the burn-in
+                            nchains = n_chains,              # nb of chains
+                            thin = n_thin,                   # thinning interval (default = 1)
+                            samplesAsCodaMCMC=T
+  )             #coda
 
   # Define a function to run one chain
-  run_chain <- function(seed) {
-    nimbleMCMC(
-      code = LETM, 
-      data = dataToNimble, 
-      constants = constants, 
-      inits = inits,  # Each chain should have different inits
-      monitors = parameters, 
-      WAIC = FALSE, 
-      niter = n_iter, 
-      nburnin = n_burnin, 
-      nchains = 1,  # Only run one chain per function call
-      thin = n_thin, 
-      samplesAsCodaMCMC = TRUE
-    )
-  }
+  # run_chain <- function(seed) {
+  #   nimbleMCMC(
+  #     code = LETM, 
+  #     data = dataToNimble, 
+  #     constants = constants, 
+  #     inits = inits,  # Each chain should have different inits
+  #     monitors = parameters, 
+  #     WAIC = FALSE, 
+  #     niter = n_iter, 
+  #     nburnin = n_burnin, 
+  #     nchains = 1,  # Only run one chain per function call
+  #     thin = n_thin, 
+  #     samplesAsCodaMCMC = TRUE
+  #   )
+  # }
   
   # Run chains in parallel
-  samples_list <- mclapply(1:n_chains, run_chain, mc.cores = n_chains)
+  #samples_list <- mclapply(1:n_chains, run_chain, mc.cores = n_chains)
   # Combine chains
-  samples <- mcmc.list(samples_list)
+  #samples <- mcmc.list(samples_list)
   
 # End time measurement
 end_time <- Sys.time()
