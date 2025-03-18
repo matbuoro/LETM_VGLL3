@@ -12,9 +12,15 @@ new.df <- na.omit(df)
 
 # remove year 1985 (only 1 female) and last year (no MSW)
 #new.df <- subset(new.df, !(t %in% c(1985, 1986, 2017)))
-new.df <- subset(new.df, t>1987 & t<2017)
-
+new.df <- subset(new.df, t>1986 & t<2017)
+#subset(new.df, t==1985)
 #attach(new.df)
+
+#plot(NULL, xlim=c(1,3),ylim=c(300,550))
+#boxplot(new.df$X~new.df$sex+new.df$g)
+#points(new.df$g,new.df$X)
+
+#new.df<-new.df[which(new.df$t==1986 & new.df$X>550 & new.df$sex==2),]
 
 # g=as.numeric(new.df$g)
 # sex=as.numeric(new.df$sex)
@@ -92,6 +98,10 @@ tmp <- aggregate(X~g+sex, data=new.df, FUN=mean)
 mean.X <- xtabs( X ~ g+sex, tmp) # convert dataframe to matrix
 tmp <- aggregate(X~g+sex, data=new.df, FUN=sd)
 sd.X <- xtabs( X ~ g+sex, tmp) # convert dataframe to matrix
+
+# Convert mu_X to a matrix
+mu_X_matrix <- unclass(as.matrix(mean.X))
+sd_X_matrix <- unclass(as.matrix(sd.X))
 # gr=NULL
 # g=as.numeric(new.df$g)
 # for (i in 1:nrow(new.df)) {
@@ -118,7 +128,7 @@ data <- list(
   , Y=new.df$Y-1 # maturation decision: 1 for 1SW, 0 otherwise
   , X=new.df$X # Observable cue, i.e growth centre/reduit
   , X.scaled=X.scaled # Observable cue, i.e growth centre/reduit
-  , mean.X=mean.X, sd.X=sd.X
+  , mu_X=mu_X_matrix, sd_X=sd_X_matrix
   , sex=as.numeric(new.df$sex) # sex
   , g=as.numeric(new.df$g) # genotypes: 1 for EE, 2 for EL and 3 for LL
   #, n=n # number of fish per genotype (row) and sex (col)

@@ -126,6 +126,23 @@ library(ggplot2)
 ggplot(new.df, aes(Size = factor(Genotype), y = Size, fill = factor(Sex))) + geom_boxplot(alpha = 0.7) + labs(title = "Distribution of Size by Genotype and Sex", Size = "Genotype", y = "Size", fill = "Sex") + theme_minimal()
 
 
+# Convert categorical variables to factors
+new.df$Sex <- as.factor(new.df$Sex)
+new.df$Genotype <- as.factor(new.df$Genotype)
+
+# Perform two-way ANOVA
+anova_result <- aov(Size ~ Sex * Genotype, data = new.df)
+
+# View results
+summary(anova_result)
+
+boxplot(Size ~ Sex * Genotype, data = new.df, col = c("lightblue", "pink"),
+        main = "Size Differences by Sex and Genotype",
+        xlab = "Groups (Sex x Genotype)", ylab = "Size")
+
+kruskal.test(Size ~ Sex, data = new.df)      # Sex effect
+kruskal.test(Size ~ Genotype, data = new.df) # Genotype effect
+
 ggplot(new.df, aes(x = Year, y = Size, color = factor(Sex), group = Sex)) +
   stat_summary(fun = mean, geom = "line", linewidth = 1.2) +
   stat_summary(fun = mean, geom = "point", size = 2) +

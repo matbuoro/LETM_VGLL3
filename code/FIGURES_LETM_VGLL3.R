@@ -72,12 +72,18 @@ jags=FALSE
 
 # ---- DISTRIBUTIONS -----
 if(nimble){
-  load("results/RESULTS_vgll3_scorff_nimble.RData")
   
-  #source("code/DATA_VGLL3_Scorff.R")
+  source("code/DATA_VGLL3_Scorff.R")
   attach(data)
+  
+  X <- data$X
+  mu_X <- data$mu_X
+  sd_X <- data$sd_X
   nyears <- length(unique(data$year))
   
+  
+  
+  load("results/RESULTS_vgll3_scorff_nimble.RData")
   #stats <- MCMCpstr(samples, func = function(x) quantile(x, probs = c(0.025,0.5 ,0.975)))
   mcmc <- do.call(rbind,samples)
   
@@ -120,14 +126,13 @@ if(nimble){
   sigma2_alpha <- array(sigma2_alpha, dim = c(nrow(sigma2_res), 3, 2))
   sigma2_eta <- array(sigma2_eta, dim = c(nrow(sigma2_res), 3, 2))
   
-  mu_X <- mcmc[,grep("mu_X", colnames(mcmc))]
-  quantiles_mu_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
-  colnames(quantiles_mu_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
-   
-  sigma_X <- mcmc[,grep("sigma_X", colnames(mcmc))]
-  quantiles_sigma_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
-  colnames(quantiles_sigma_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
-  
+  # mu_X <- mcmc[,grep("mu_X", colnames(mcmc))]
+  # quantiles_mu_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
+  # colnames(quantiles_mu_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+  #  
+  # sd_X <- mcmc[,grep("sd_X", colnames(mcmc))]
+  # quantiles_sd_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))))
+  # colnames(quantiles_sd_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
   
   ratio <- mcmc[,grep("ratio", colnames(mcmc))]
   a <- mcmc[,c("a[1]","a[2]")]
@@ -219,7 +224,7 @@ par(mfcol=c(1,3))
 #mgp=c(3,1,0)
 #xpd=NA
 #)
-ylim=range(data$X)
+ylim=range(new.df$X)
 xlim=c(-1.5,1.5)
 
 for (gene in 1:3){
@@ -262,7 +267,7 @@ for (gene in 1:3){
 }
 
 
-id <-which(data$X>550)
+#id <-which(data$X>550)
 
 
 
@@ -335,21 +340,21 @@ compute_reaction_norms <- function(mcmc, X, sigma2_eta, theta) {
   
   if(nimble){
     # Compute quantiles for mu_X
-    mu_X <- mcmc[, grep("mu_X", colnames(mcmc))]
-    quantiles_mu_X <- apply(mu_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
-    mu_X <- matrix(quantiles_mu_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
-    
-    # Compute quantiles for sigma_X
-    sigma_X <- sqrt(mcmc[, grep("sigma2_X", colnames(mcmc))])
-    quantiles_sigma_X <- apply(sigma_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
-    sigma_X <- matrix(quantiles_sigma_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
+    # mu_X <- mcmc[, grep("mu_X", colnames(mcmc))]
+    # quantiles_mu_X <- apply(mu_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
+    # mu_X <- matrix(quantiles_mu_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
+    # 
+    # # Compute quantiles for sd_X
+    # sd_X <- sqrt(mcmc[, grep("sigma2_X", colnames(mcmc))])
+    # quantiles_sd_X <- apply(sd_X, 2, quantile, probs = c(0.05, 0.5, 0.95))
+    # sd_X <- matrix(quantiles_sd_X[2,], nrow = 3, ncol = 2, byrow = FALSE)
     
     # Compute median sigma2_eta
     sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
     sigma2_eta_med <- apply(sigma2_eta, 2, quantile, probs = c(0.05, 0.5, 0.95))
   }else{
-    mu_X <- samples$BUGSoutput$median$mu_X
-    sigma_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
+    #mu_X <- samples$BUGSoutput$median$mu_X
+    #sd_X <- sqrt(samples$BUGSoutput$median$sigma2_X)
     sigma2_eta <- samples$BUGSoutput$median$sigma2_eta
   }
   
@@ -359,11 +364,11 @@ compute_reaction_norms <- function(mcmc, X, sigma2_eta, theta) {
       theta_med <- apply(theta[,,j], 2, quantile, probs = c(0.05, 0.5, 0.95))
       sigma2_eta_idx <- i + (j - 1) * 3
       
-      X.scaled <- (X.sim - mu_X[i, j]) / sigma_X[i, j]
+      X.scaled <- (X.sim - mu_X[i, j]) / sd_X[i, j]
       z_pred <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
         sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
       
-      X.scaled <- (X.obs - mu_X[i, j]) / sigma_X[i, j]
+      X.scaled <- (X.obs - mu_X[i, j]) / sd_X[i, j]
       z_obs <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
         sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
       
@@ -724,11 +729,11 @@ for (j in 1:2){
 
 
 
-mu_X_med <- array(quantiles_mu_X[,"50%"],dim=c(3,2))
-sigma_X_med <- array(quantiles_sigma_X[,"50%"],dim=c(3,2))
+#mu_X_med <- array(quantiles_mu_X[,"50%"],dim=c(3,2))
+#sd_X_med <- array(quantiles_sd_X[,"50%"],dim=c(3,2))
 X.scaled=NULL
 for (i in 1: length(X)){
-  X.scaled[i] <- (X[i]-mu_X_med[data$g[i],data$sex[i]])/sigma_X_med[data$g[i],data$sex[i]]
+  X.scaled[i] <- (X[i]-mu_X[data$g[i],data$sex[i]])/sd_X[data$g[i],data$sex[i]]
 }
 
 
@@ -810,7 +815,7 @@ par(mfrow=c(1,1))
 plot(NULL,xlim=c(0,5),ylim=c(-1,1),xlab="GENOTYPE",ylab="Correlation eta/theta", xaxt="n")
 legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex)
 axis(1, line=1, at=1:4,labels=c("All","EE", "EL", "LL"),tick = FALSE,cex.axis=1.5)
-
+abline(h=0,lty=2)
 segments(1, quantile(cor.all,probs=0.025),1, quantile(cor.all,probs=0.975),col=1)
 segments(1, quantile(cor.all,probs=0.25),1, quantile(cor.all,probs=0.75),col=1,lwd=2)
 points(1,quantile(cor.all,probs=0.5), pch=21, col=1,bg="white")
@@ -1136,7 +1141,7 @@ for (s in 1:2){
 # #Xc <- (X-mean(X))/sd(X)
 # X.scaled=NULL
 # for (i in 1: length(X)){
-#   X.scaled[i] <- (X[i]-mu_X[data$g[i],data$sex[i]])/sigma_X[data$g[i],data$sex[i]]
+#   X.scaled[i] <- (X[i]-mu_X[data$g[i],data$sex[i]])/sd_X[data$g[i],data$sex[i]]
 # }
 # Xc <- X.scaled
 # 

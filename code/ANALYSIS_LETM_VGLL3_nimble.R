@@ -14,8 +14,11 @@ library(writexl)
 source("code/DATA_VGLL3_Scorff.R")
 #attach(data)
 #str(data)
-data$X.scaled <- NULL
-dataToNimble <- list(Y=data$Y, X=data$X)
+#data$X.scaled <- NULL
+dataToNimble <- list(Y=data$Y
+                     #, X=data$X
+                     , X.scaled=data$X.scaled
+                     )
 constants <- list(N=data$N
                   #, X= data$X
                   #, mean.X=data$mean.X
@@ -39,21 +42,21 @@ LETM <- nimbleCode({
     # k: scaled dominance deviation
     # sex: Male 1 / female 2
     
-    for (s in 1:2){
-      for (gen in 1:3){
-        mu_X[gen,s] ~ dnorm(0,0.001)
-        
-        sigma_X[gen,s]~dgamma(2,1/sig)#dunif(0,10)
-        sigma2_X[gen,s] <- pow(sigma_X[gen,s],2)
-      }}
-  sig~dchisqr(2)
+  #   for (s in 1:2){
+  #     for (gen in 1:3){
+  #       mu_X[gen,s] ~ dnorm(0,0.001)
+  #       
+  #       sigma_X[gen,s]~dgamma(2,1/sig)#dunif(0,10)
+  #       sigma2_X[gen,s] <- pow(sigma_X[gen,s],2)
+  #     }}
+  # sig~dchisqr(2)
     
     #======== LIKELIHOOD ========#
     for (i in 1:N) {
       
       ## Environmental cue (X):
-      X[i]~dnorm(mu_X[g[i],sex[i]],  1/sigma2_X[g[i],sex[i]]) # Growth distributions
-      X.scaled[i] <- (X[i]-mu_X[g[i],sex[i]])/sigma_X[g[i],sex[i]] # scaled growth
+      #X[i]~dnorm(mu_X[g[i],sex[i]],  1/sigma2_X[g[i],sex[i]]) # Growth distributions
+      #X.scaled[i] <- (X[i]-mu_X[g[i],sex[i]])/sigma_X[g[i],sex[i]] # scaled growth
       
       ## Phenotypes:
       Y[i]~dbern(p_mat[i])
@@ -201,11 +204,11 @@ LETM <- nimbleCode({
 # Parameters ####
 parameters <- c(
   #"Y"
-  "mu_X","sigma2_X","sigma_X"
-  ,"sig"
+  #"mu_X","sigma2_X","sigma_X"
+  #,"sig"
   #,"beta","eps_X"
   #,"mean_theta","mean_eta","delta_eta"
-  ,"delta_theta"
+  "delta_theta"
   ,"mu_theta", "mu_alpha"#,"eps_theta"
   #,"delta_X"
   ,"delta_a"
@@ -241,11 +244,18 @@ parameters <- c(
 
 
 # Initial values ####
+mu_theta=c(0,3.8)
 eta_inits <- theta_inits <- numeric(constants$N)
 for (i in 1:constants$N){
   eta_inits[i] <- rnorm(1,0,1)
-  if(data$Y[i]==1) theta_inits[i] <- eta_inits[i]-1
-  if(data$Y[i]==0) theta_inits[i] <- eta_inits[i]+1
+  if(data$Y[i]==1) {
+    theta_inits[i] <- mu_theta[data$sex[i]]
+    eta_inits[i] <- theta_inits[i]+0.1
+  }
+  if(data$Y[i]==0) {
+    theta_inits[i] <- mu_theta[data$sex[i]]
+    eta_inits[i] <- theta_inits[i]-0.1
+  }
 }
 
 inits <- function(){
@@ -255,9 +265,9 @@ inits <- function(){
     , a=c(3,1)#,delta_a=0
     , k=c(-1,0)#,delta_k=1
     , ratio=c(rep(0.5, 3),NA)
-    , mu_X=data$mean.X
-    , sigma_X=data$sd.X
-    , sig=30
+    #, mu_X=data$mean.X
+    #, sigma_X=data$sd.X
+    #, sig=30
   )
 }
 
@@ -266,7 +276,7 @@ inits <- function(){
 n_chains <- 2 # number of chains
 n_store <- 5000 # target of number of iteration to store per chain
 n_burnin <- 1000 # number of iterations to discard
-n_thin <- 25 # thinning interval
+n_thin <- 100 # thinning interval
 n_iter <- (n_store * n_thin) + n_burnin # number of iterations to run per chain
 print(n_iter)
 
@@ -346,8 +356,8 @@ MCMCtrace(object = samples,
 
 parToPlot <-  c(
 #"mu_X","sigma2_X","sigma_X"
-"sig"
-,"mu_theta", "mu_alpha"
+#"sig"
+"mu_theta", "mu_alpha"
 ,"a","k"
 ,"sigma2_eta"
 ,"ratio"
