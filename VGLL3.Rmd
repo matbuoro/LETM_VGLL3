@@ -6,10 +6,67 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+
+require("NatParksPalettes")
+colors <- natparks.pals(name="Banff",n=3,type="discrete")
+t_col <- function(color, percent = 50, name = NULL) {
+  #      color = color name
+  #    percent = % transparency
+  #       name = an optional name for the color
+  
+  ## Get RGB values for named color
+  rgb.val <- col2rgb(color)
+  
+  ## Make new color using input color as base and alpha set by transparency
+  t.col <- rgb(rgb.val[1], rgb.val[2], rgb.val[3],
+               max = 255,
+               alpha = (100 - percent) * 255 / 100,
+               names = name)
+  
+  ## Save the color
+  invisible(t.col)
+}
+
+format_ci <- function(values) {
+  # Compute median
+  med <- median(values) * 100
+  
+  # Compute 95% credible interval
+  ci <- quantile(values, probs = c(0.05, 0.95)) * 100
+  
+  # Format output
+  formatted <- sprintf("%.1f%% (90%% CI: [%.1f; %.1f])", med, ci[1], ci[2])
+  
+  return(formatted)
+}
+
+format_ci2 <- function(values) {
+  # Compute median
+  med <- median(values)
+  
+  # Compute 95% credible interval
+  ci <- quantile(values, probs = c(0.05, 0.95))
+  
+  # Format output
+  formatted <- sprintf("%.1f (90%% CI: [%.1f; %.1f])", med, ci[1], ci[2])
+  
+  return(formatted)
+}
+
+library(showtext)
+showtext_auto()
+
+female = intToUtf8(9792)
+male = intToUtf8(9794)
+
+
+gene.name=c("EE","EL","LL")
+col.sex<-c("lightgrey","darkgrey")
+
 ```
 
-```{r cars}
+```{r cars, echo=FALSE}
 load("data/data_vgll3.rdata")
 new.df <- na.omit(df)
 
@@ -136,7 +193,7 @@ anova_result <- aov(Size ~ Sex * Genotype, data = new.df)
 # View results
 summary(anova_result)
 
-boxplot(Size ~ Sex * Genotype, data = new.df, col = c("lightblue", "pink"),
+boxplot(Size ~ Sex * Genotype, data = new.df, col = c("lightblue", "tomato"),
         main = "Size Differences by Sex and Genotype",
         xlab = "Groups (Sex x Genotype)", ylab = "Size")
 
@@ -181,3 +238,585 @@ ggplot(new.df, aes(x = Year, y = Size, color = factor(Sex), group = Sex)) +
 plot(NULL,xlim=c(1986,2016),ylim=range(new.df$Size), ylab="Size", xlab="")
 points(new.df$Year,new.df$Size,col=new.df$Sex, pch=16)
 ```
+
+**RESULTS:**
+
+```{r}
+load("results/RESULTS_vgll3_scorff_nimble.RData")
+
+#if(nimble){
+  
+  source("code/DATA_VGLL3_Scorff.R")
+  attach(data)
+  
+  X <- data$X
+  mu_X <- data$mu_X
+  sd_X <- data$sd_X
+  nyears <- length(unique(data$year))
+  
+  
+  
+  load("results/RESULTS_vgll3_scorff_nimble.RData")
+  #stats <- MCMCpstr(samples, func = function(x) quantile(x, probs = c(0.05,0.5 ,0.95)))
+  mcmc <- do.call(rbind,samples)
+  
+  ## pool theta samples between the three chains
+  mu_theta <- mcmc[,grep("mu_theta", colnames(mcmc))]
+  mu_alphaMale <- mcmc[,"mu_theta[1]"]#samples$BUGSoutput$sims.list$mu_theta[,1]
+  mu_alphaFemale <- mcmc[,"mu_theta[2]"]#samples$BUGSoutput$sims.list$mu_theta[,2]
+  #mu_alphaMale <- samples$BUGSoutput$sims.list$mu_theta[,1,1]
+  #mu_alphaFemale <- samples$BUGSoutput$sims.list$mu_theta[,1,2]
+  alpha1m <- mcmc[,"alpha[1, 1]"]
+  alpha2m <- mcmc[,"alpha[2, 1]"]
+  alpha3m <- mcmc[,"alpha[3, 1]"]
+  
+  alpha1f <- mcmc[,"alpha[1, 2]"]
+  alpha2f <- mcmc[,"alpha[2, 2]"]
+  alpha3f <- mcmc[,"alpha[3, 2]"]
+  
+  theta <- array(,dim=c(length(mu_alphaFemale),3,2))
+  theta[,1,1] <- mu_alphaMale + alpha1m
+  theta[,2,1] <- mu_alphaMale + alpha2m
+  theta[,3,1] <- mu_alphaMale + alpha3m
+  
+  theta[,1,2] <- mu_alphaFemale + alpha1f
+  theta[,2,2] <- mu_alphaFemale + alpha2f
+  theta[,3,2] <- mu_alphaFemale + alpha3f
+  
+  eta <- mcmc[,c(paste0("eta[",1:data$N,"]"))]
+  etas <- mcmc[,c(paste0("eta[",1:data$N,"]"))]
+  thetas <- mcmc[,c(paste0("theta[",1:data$N,"]"))]
+  
+  thetas_means <- apply(thetas,2,mean)
+  etas_means <- apply(etas,2,mean)
+  
+  sigma2_alpha <- mcmc[,grep("sigma2_alpha", colnames(mcmc))]
+  sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
+  sigma2_res <- mcmc[,grep("sigma2_res", colnames(mcmc))]
+  
+  # Creating a 3D array sigma2_res
+  sigma2_res <- array(sigma2_res, dim = c(nrow(sigma2_res), 3, 2))
+  sigma2_alpha <- array(sigma2_alpha, dim = c(nrow(sigma2_res), 3, 2))
+  sigma2_eta <- array(sigma2_eta, dim = c(nrow(sigma2_res), 3, 2))
+  
+  # mu_X <- mcmc[,grep("mu_X", colnames(mcmc))]
+  # quantiles_mu_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))))
+  # colnames(quantiles_mu_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+  #  
+  # sd_X <- mcmc[,grep("sd_X", colnames(mcmc))]
+  # quantiles_sd_X <- as.data.frame(t(apply(mu_X, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95))))
+  # colnames(quantiles_sd_X) <- c("2.5%", "25%", "50%", "75%", "97.5%")  
+  
+  ratio <- mcmc[,grep("ratio", colnames(mcmc))]
+  a <- mcmc[,c("a[1]","a[2]")]
+  k <- mcmc[,c("k[1]","k[2]")]
+  h2 <- mcmc[,c("h2[1]","h2[2]")]
+  
+
+```
+
+Our study allows us to disentangle the environmental and genetic components of variance for the age at maturation. It also provides a better understanding of the role of growth in environmental variance and of VGLL3 in genetic variance.
+
+**1. Environmental Variance and Proximal Signal:**
+
+Our results show no significant differences in growth between males and females or across genotypes. However, they indicate that growth in freshwater and during the first summer at sea serves as a strong indicator of the environmental signal influencing maturation decisions, particularly in females. Growth explains `r format_ci(ratio[,1])` of the environmental variance in males and `r format_ci(ratio[,2])` in females.
+
+**2. Genetic Variance:**
+
+We demonstrate a strong genetic influence on the decision to mature at one year, particularly in males. The genetic contribution to total variance is estimated at `r format_ci(h2[1])` in males and `r format_ci(h2[2])` in females. The VGLL3 gene contributes `r format_ci(1-ratio[,3])` to genetic variance, with this effect considered equal between sexes.
+
+```{r fig.height=4, fig.width=8}
+par(mfrow=c(1,3))
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution proximate cue to environmental variance",xaxt="n",main="Environment")
+#axis(1, at=c(1.5,3.5),labels=c("Envir", "Genetic"),las=2)
+axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
+#axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+for (j in 1:2){
+  segments(j, apply(ratio, 2, quantile, probs=0.05)[j],j, apply(ratio, 2, quantile, probs=0.95)[j],col="black")
+  segments(j, apply(ratio, 2, quantile, probs=0.25)[j],j, apply(ratio, 2, quantile, probs=0.75)[j],col="black",lwd=2)
+  points(j,apply(ratio, 2, quantile, probs=0.5)[j], pch=21, col="black",bg="white")
+  text(j,apply(ratio, 2, quantile, probs=0.99)[j]+1,male,col="black")
+}
+
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution of VGLL3 to genetic variance",xaxt="n",main="Genetic")
+axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
+#axis(1, at=1:4,labels=c("ratio_eta", "ratio_eta", "ratio_res", "ratio_res"),las=2)
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+for (j in 3:4){
+  segments(j-2, apply(1-ratio, 2, quantile, probs=0.05)[j],j-2, apply(1-ratio, 2, quantile, probs=0.95)[j],col="black")
+  segments(j-2, apply(1-ratio, 2, quantile, probs=0.25)[j],j-2, apply(1-ratio, 2, quantile, probs=0.75)[j],col="black",lwd=2)
+  points(j-2,apply(1-ratio, 2, quantile, probs=0.5)[j], pch=21, col="black",bg="white")
+  text(j-2,apply(1-ratio, 2, quantile, probs=0.99)[j]+1,female,col="black")
+}
+  
+# Contribution total variance = Percentages of the total phenotypic variance
+#h2 <- samples$BUGSoutput$sims.list$h2
+#h2 <- mcmc[,paste0("h2[",1:2,"]")]
+plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Genetic contribution to total variance (h2)",xaxt="n",main="Heritability")
+#axis(1, at=1:2,labels=c(male, female))
+axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+for (j in 1:2){
+  segments(j, apply(h2, 2, quantile, probs=0.05)[j],j, apply(h2, 2, quantile, probs=0.95)[j],col=1)
+  segments(j, apply(h2, 2, quantile, probs=0.25)[j],j, apply(h2, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+  points(j,apply(h2, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+  #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+}
+
+
+```
+
+## 3. Genetic Architecture
+
+The genetic variance associated with VGLL3 and residual variance in females is very low and significantly lower than in males.
+
+But the maturation threshold is significantly higher in females (`r format_ci2(mu_alphaFemale)`) than in males (`r format_ci2(mu_alphaMale)`), suggesting that females require more accumulated energy (via growth) to reach maturation.
+
+The genotypic values of VGLL3 are similar between sexes: `r format_ci2(a[1])` in males and `r format_ci2(a[2])` in females. However, males exhibit complete dominance of the E allele (k = `r format_ci2(k[,1])`), whereas females show only weak dominance (k = `r format_ci2(k[,2])`, p[k \< 0] = `r mean(k[,2]<0)`).
+
+```{r fig.height=4, fig.width=8}
+#### GENETIC COMPONENTS
+par(mfrow=c(1,3))
+
+mu_alphas <- cbind(mu_alphaMale,mu_alphaFemale)
+# Mean threshiolds
+#mu_alphas <- samples$BUGSoutput$sims.list$mu_alpha
+plot(NULL, xlim=c(0,3),ylim=range(mu_alphas),xlab="Sex", ylab="Mean Maturation thresholds",xaxt="n")
+axis(1, at=1:2,labels=c(male, female))
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+#abline(h=mu_alphas[1],lty=3,col="lightgrey");text(4,mu_alphas[1]+1,male,col="lightgrey")
+#abline(h=mu_alphas[2],lty=5,col="lightgrey");text(4,mu_alphas[2]+1,female,col="lightgrey")
+for (j in 1:2){
+  #MALE
+  segments(j, apply(mu_alphas, 2, quantile, probs=0.05)[j],j, apply(mu_alphas, 2, quantile, probs=0.95)[j],col=1)
+  segments(j, apply(mu_alphas, 2, quantile, probs=0.25)[j],j, apply(mu_alphas, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+  points(j,apply(mu_alphas, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+  #text(j,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+}
+
+
+# Additive effect
+#am <- c(samples$chain1[,"a[1]"], samples$chain2[,"a[1]"],samples$chain3[,"a[1]"])
+#af <- c(samples$chain1[,"a[2]"], samples$chain2[,"a[2]"],samples$chain3[,"a[2]"])
+#a <- cbind(am,af)
+#a <- samples$BUGSoutput$sims.list$a
+plot(NULL, xlim=c(0,3),ylim=c(0,4),xlab="Sex", ylab="Genotypic value",xaxt="n")
+axis(1, at=1:2,labels=c(male, female))
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+#abline(h=mu_alphas[1],lty=3,col="lightgrey");text(4,mu_alphas[1]+1,male,col="lightgrey")
+#abline(h=mu_alphas[2],lty=5,col="lightgrey");text(4,mu_alphas[2]+1,female,col="lightgrey")
+for (j in 1:2){
+  #MALE
+  segments(j, apply(a, 2, quantile, probs=0.05)[j],j, apply(a, 2, quantile, probs=0.95)[j],col=1)
+  segments(j, apply(a, 2, quantile, probs=0.25)[j],j, apply(a, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+  points(j,apply(a, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+  #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+}
+
+
+# Dominance effect
+#k <- samples$BUGSoutput$sims.list$k
+# km <- c(samples$chain1[,"k[1]"], samples$chain2[,"k[1]"],samples$chain3[,"k[1]"])
+# kf <- c(samples$chain1[,"k[2]"], samples$chain2[,"k[2]"],samples$chain3[,"k[2]"])
+# k <- cbind(km,kf)
+#k <- samples$BUGSoutput$sims.list$k
+plot(NULL, xlim=c(0,3),ylim=range(k),xlab="Sex", ylab="Dominance deviation (scaled)",xaxt="n")
+axis(1, at=1:2,labels=c(male, female))
+#legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+abline(h=0,lty=2,col="darkgrey")
+#abline(h=mu_alphas[2],lty=5,col="lightgrey");text(4,mu_alphas[2]+1,female,col="lightgrey")
+for (j in 1:2){
+  #MALE
+  segments(j, apply(k, 2, quantile, probs=0.05)[j],j, apply(k, 2, quantile, probs=0.95)[j],col=1)
+  segments(j, apply(k, 2, quantile, probs=0.25)[j],j, apply(k, 2, quantile, probs=0.75)[j],col=1,lwd=2)
+  points(j,apply(k, 2, quantile, probs=0.5)[j], pch=21, col=1,bg="white")
+  #text(j-0.1,apply(mu_alphas, 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+}
+
+```
+
+
+
+## REACTION NORMS
+
+
+```{r fig.height=8, fig.width=8}
+par(mfrow=c(2,2))
+#boxplot(X~g + sex, data=data)
+plot(NULL, xlim=c(0,4),ylim=range(data$X),xlab="Genotype", ylab="Size",xaxt="n")
+axis(1, at=1:3,labels=c("EE", "EL", "LL"))
+legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+
+for (j in 1:3){
+  # MALE
+  segments(j-0.1, quantile(X[g==j & sex==1], probs = 0.05),j-0.1, quantile(X[g==j & sex==1], probs = 0.95),col=colors[j])
+  segments(j-0.1, quantile(X[g==j & sex==1], probs = 0.25),j-0.1, quantile(X[g==j & sex==1], probs = 0.75),col=colors[j],lwd=2)
+  points(j-0.1,median(X[g==j & sex==1]), pch=24, col=colors[j],bg="white")
+  text(j-0.1,quantile(X[g==j & sex==1], probs = 0.995),male,col=colors[j])
+
+  # FEMALE
+  segments(j+0.1, quantile(X[g==j & sex==2], probs = 0.05),j+0.1, quantile(X[g==j & sex==2], probs = 0.95),col=colors[j])
+  segments(j+0.1, quantile(X[g==j & sex==2], probs = 0.25),j+0.1, quantile(X[g==j & sex==2], probs = 0.75),col=colors[j],lwd=2)
+  points(j+0.1,median(X[g==j & sex==2]), pch=21, col=colors[j],bg="white")
+  text(j+0.1,quantile(X[g==j & sex==2], probs = 0.995),female,col=colors[j])
+}
+
+
+
+#par(mfrow=c(2,2))
+plot(NULL, xlim=c(0,4),ylim=c(-4.5,4.5),xlab="Genotype", ylab="Means of maturation thresholds",xaxt="n")
+axis(1, at=1:3,labels=c("EE", "EL", "LL"))
+legend("topleft", c("Male", "Female"),pch=c(24,21),col=c(1,1),bty="n")
+#abline(h=mu_alphas[1,"50%"],lty=3,col="darkgrey");text(4,mu_alphas[1,"50%"]+1,male,col="darkgrey")
+#abline(h=mu_alphas[2,"50%"],lty=5,col="darkgrey");text(4,mu_alphas[2,"50%"]+1,female,col="darkgrey")
+for (j in 1:3){
+  #MALE
+  segments(1-0.1, apply(theta[,,1], 2, quantile, probs=0.5)[1],3-0.1, apply(theta[,,1], 2, quantile, probs=0.5)[3],col="darkgrey",lty=2)
+  segments(j-0.1, apply(theta[,,1], 2, quantile, probs=0.05)[j],j-0.1, apply(theta[,,1], 2, quantile, probs=0.95)[j],col=colors[j])
+  segments(j-0.1, apply(theta[,,1], 2, quantile, probs=0.25)[j],j-0.1, apply(theta[,,1], 2, quantile, probs=0.75)[j],col=colors[j],lwd=2)
+  points(j-0.1,apply(theta[,,1], 2, quantile, probs=0.5)[j], pch=24, col=colors[j],bg="white")
+  #text(j-0.1,apply(theta[,,1], 2, quantile, probs=0.99)[j]+1,male,col=colors[j])
+  
+  
+  #FEMALE
+  segments(1+0.1, apply(theta[,,2], 2, quantile, probs=0.5)[1],3+0.1, apply(theta[,,2], 2, quantile, probs=0.5)[3],col="darkgrey",lty=2)
+  segments(j+0.1, apply(theta[,,2], 2, quantile, probs=0.05)[j],j+0.1, apply(theta[,,2], 2, quantile, probs=0.95)[j],col=colors[j])
+  segments(j+0.1, apply(theta[,,2], 2, quantile, probs=0.25)[j],j+0.1, apply(theta[,,2], 2, quantile, probs=0.75)[j],col=colors[j],lwd=2)
+  points(j+0.1,apply(theta[,,2], 2, quantile, probs=0.5)[j], pch=21, col=colors[j],bg="white")
+  #text(j+0.1,apply(theta[,,2], 2, quantile, probs=0.99)[j]+1,female,col=colors[j])
+  
+}
+
+
+
+
+## REACTION NORMS
+compute_reaction_norms <- function(mcmc, X, sigma2_eta, theta) {
+  # Define X.sim and X.obs
+  X.sim <- seq(200, 600, 10)
+  X.pred <- scale(X.sim, center = mean(X), scale = sd(X))
+  X.obs <- seq(min(X), max(X), 10)
+  X.obsc <- scale(X.obs, center = mean(X), scale = sd(X))
+  
+  # Initialize arrays
+  p.pred <- array(NA, dim = c(length(X.pred), 3, 2))
+  p.obs <- array(NA, dim = c(length(X.obs), 3, 2))
+  
+
+    
+    # Compute median sigma2_eta
+    sigma2_eta <- mcmc[,grep("sigma2_eta", colnames(mcmc))]
+    sigma2_eta_med <- apply(sigma2_eta, 2, quantile, probs = c(0.05, 0.5, 0.95))
+
+  
+  for (i in 1:3) {
+    for (j in 1:2) {
+      
+      theta_med <- apply(theta[,,j], 2, quantile, probs = c(0.05, 0.5, 0.95))
+      sigma2_eta_idx <- i + (j - 1) * 3
+      
+      X.scaled <- (X.sim - mu_X[i, j]) / sd_X[i, j]
+      z_pred <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
+        sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
+      
+      X.scaled <- (X.obs - mu_X[i, j]) / sd_X[i, j]
+      z_obs <- ((X.scaled / sqrt(sigma2_eta_med[2, sigma2_eta_idx] + 1)) - theta_med[2, i]) /
+        sqrt(sigma2_eta_med[2, sigma2_eta_idx] / (sigma2_eta_med[2, sigma2_eta_idx] + 1))
+      
+      #if (j == 1) {
+      p.pred[, i, j] <- pnorm(z_pred)
+      #} else {
+      p.obs[, i, j] <- pnorm(z_obs)
+    }
+  }
+  
+  
+  return(list(p.pred = p.pred, p.obs = p.obs, X.sim=X.sim, X.pred=X.pred, X.obsc=X.obsc))
+}
+
+result <- compute_reaction_norms(mcmc, X, sigma2_eta, theta)
+
+X.sim <- result$X.sim
+p.pred <- result$p.pred
+X.pred <- result$X.pred
+X.obsc <- result$X.obsc
+p.obs <- result$p.obs
+
+
+#par(mfrow=c(1,2))
+
+hist((data$X[data$sex==1] - mean(data$X))/sd(data$X)
+     , xlim=range(X.pred)
+     ,border=t_col("lightgrey",20), lty="blank"
+     ,xlab="",ylab="", xaxt='n', yaxt='n',main=""
+     , freq = FALSE,col = t_col("lightgrey",20)) # Save 2nd histogram data
+#plot(hgB, col = c2)
+
+# prepare graphics to add second plot
+par(new = TRUE)
+
+ylab="Maturation probability at 1SW"
+plot(NULL, xlim=range(X.pred),ylim=c(0,1)
+     , xaxt='n'
+     ,ylab=ylab, xlab="Growth", main=male)
+axis(1,at=X.pred,labels=X.sim)
+legend("topleft", legend=c("EE", "EL", "LL"),fill=colors, bty="n",border = colors)
+lines(X.pred, p.pred[,1,1],lty=1,lwd=1,col=colors[1])
+lines(X.obsc, p.obs[,1,1],lty=1,lwd=3,col=colors[1])
+
+lines(X.pred, p.pred[,2,1],lty=1,lwd=1,col=colors[2])
+lines(X.obsc, p.obs[,2,1],lty=1,lwd=3,col=colors[2])
+
+lines(X.pred, p.pred[,3,1],lty=1,lwd=1,col=colors[3])
+lines(X.obsc, p.obs[,3,1],lty=1,lwd=3,col=colors[3])
+
+
+
+hist((data$X[sex==2] - mean(data$X))/sd(data$X)
+     , xlim=range(X.pred)
+     ,border=t_col("lightgrey",20),lty="blank"
+     ,xlab="",ylab="", xaxt='n', yaxt='n',main=""
+     , freq = FALSE,col = t_col("lightgrey",20)) # Save 2nd histogram data
+#plot(hgB, col = c2, add = TRUE)
+# prepare graphics to add second plot
+par(new = TRUE)
+plot(NULL, xlim=range(X.pred),ylim=c(0,1),ylab=ylab
+     , xaxt='n'
+     , xlab="Growth", main=female)
+axis(1,at=X.pred,labels=X.sim)
+legend("topleft", legend=c("EE", "EL", "LL"),fill=colors, bty="n",border = colors)
+lines(X.pred, p.pred[,1,2],lty=1,lwd=1,col=colors[1])
+lines(X.obsc, p.obs[,1,2],lty=1,lwd=3,col=colors[1])
+
+lines(X.pred, p.pred[,2,2],lty=1,lwd=1,col=colors[2])
+lines(X.obsc, p.obs[,2,2],lty=1,lwd=3,col=colors[2])
+
+lines(X.pred, p.pred[,3,2],lty=1,lwd=1,col=colors[3])
+lines(X.obsc, p.obs[,3,2],lty=1,lwd=3,col=colors[3])
+
+
+
+```
+
+## 4. Temporal Trends:####
+
+Our results indicate a decline in the proximal signal over time, with a significant decrease after 2005. However, no clear temporal trend was observed for maturation thresholds in either sex. A slight but non-significant negative temporal correlation was observed between maturation thresholds and proximal signals, suggesting a plastic rather than genetic response.
+Additionally, we observed a slight decline in the frequency of the L allele over time, with a positive correlation with the maturation threshold in females only.
+
+
+```{r fig.height=6, fig.width=8}
+#thetas_medians=array(,dim=c(nrow(thetas), 33,2))
+# thetas_medians=array(,dim=c(5, nyears,2));rownames(thetas_medians)<-c("2.5%","25%","50%","75%","97.5%")
+# etas_medians=array(,dim=c(5, nyears,2));rownames(etas_medians)<-c("2.5%","25%","50%","75%","97.5%")
+# etas_medians_all=array(,dim=c(5, nyears));rownames(etas_medians_all)<-c("2.5%","25%","50%","75%","97.5%")
+
+year <- data$year
+years <- sort(unique(year))
+nyears <- length(unique(year))
+etas_means_all=array(,dim=c(5, nyears));rownames(etas_means_all)<-c("2.5%","25%","50%","75%","97.5%")
+colnames(etas_means_all)<-years
+
+thetas_means_male=array(,dim=c(5, nyears))
+rownames(thetas_means_male)<-c("2.5%","25%","50%","75%","97.5%")
+colnames(thetas_means_male)<-years
+thetas_means_female=etas_means_female=etas_means_male=thetas_means_male
+
+j=0
+for (y in years){
+  j=j+1
+  #print(j)
+  tmp=NULL
+  tmp <-etas[,which(year==y)]
+  if(is.null(ncol(tmp))==FALSE) {
+    etas_means_all[,j] <- quantile(apply(tmp,1,mean),probs=c(0.05,0.25, 0.5,0.75, 0.95))
+ 
+tmp_male <- thetas[,which(sex==1 & year==y)]
+thetas_means_male[,j] <- quantile(apply(tmp_male,1,mean),probs=c(0.05,0.25, 0.5,0.75, 0.95))
+tmp_male <- etas[,which(sex==1 & year==y)]
+etas_means_male[,j] <- quantile(apply(tmp_male,1,mean),probs=c(0.05,0.25, 0.5,0.75, 0.95))
+
+tmp_female <- thetas[,which(sex==2 & year==y)]
+thetas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.05,0.25, 0.5,0.75, 0.95))
+tmp_female <- etas[,which(sex==2 & year==y)]
+etas_means_female[,j] <- quantile(apply(tmp_female,1,mean),probs=c(0.05,0.25, 0.5,0.75, 0.95))
+  }
+}
+
+
+
+thetas_means_ind=etas_means_ind=array(,dim=c(data$N,nyears,2))
+for (s in 1:2){
+  for (y in years){
+    tmp <- thetas_means[sex==s & year==y]
+    thetas_means_ind[1:length(tmp),y-min(data$year)-1,s] <- tmp
+    tmp=NULL
+    tmp <- etas_means[sex==s & year==y]
+    etas_means_ind[1:length(tmp),y-min(data$year)-1,s] <- tmp
+  }
+}
+
+
+par(mfcol=c(1,2))
+range_years <- as.numeric(colnames(etas_means_all))
+plot(NULL, xlim=range(range_years),ylim=c(-1,1), ylab="Proximate cue",xlab="")
+#rect(xleft = 1985, xright = 2005, ybottom = -4, ytop = 4,border = "lightgrey", col = "lightgrey")
+#rect(xleft = 2005, xright = 2018, ybottom = -4, ytop = 4,border = "darkgrey", col = "darkgrey")
+
+segments(range_years-.1,etas_means_all["2.5%",], range_years-.1,etas_means_all["97.5%",] ,col=1)
+segments(range_years-.1,etas_means_all["25%",], range_years-.1,etas_means_all["75%",] ,col=1,lwd=2)
+points(range_years-.1,etas_means_all["50%",],col=1,pch=16)
+# for (y in 1:32){
+#   for (i in 1:nrow(etas_medians_ind[,,1])){
+#  #   points(1985+y, etas_medians_ind[i,y,1],col=1,pch=3)
+#   }
+#   }
+
+y <- etas_means_all["50%",]
+x <- range_years
+mod1=loess(y~x,span=0.5)
+xfit=seq(from=min(x),to=max(x),length.out=30)
+yfit1=predict(mod1,newdata=xfit)
+points(xfit,yfit1,type="l",lwd=2,col=1)
+
+
+
+
+#par(mfcol=c(1,1))
+#tmp <- aggregate(thetas_50~year+sex, FUN = mean)
+range_years <- as.numeric(colnames(thetas_means_male))
+plot(NULL, xlim=range(range_years),ylim=c(-6,4), ylab="Tresholds",xlab="")
+# rect(xleft = 1986, xright = 2005, ybottom = -5, ytop = 5,border = "lightgrey", col = "lightgrey")
+# rect(xleft = 2005, xright = 2016, ybottom = -5, ytop = 5,border = "darkgrey", col = "darkgrey")
+
+# for (y in 1986:2017){
+# points(y-.1,thetas_50[year==y & ],col=1,pch=16)
+# }
+
+segments(range_years-.1,thetas_means_male["2.5%",], range_years-.1,thetas_means_male["97.5%",] ,col=1)
+segments(range_years-.1,thetas_means_male["25%",], range_years-.1,thetas_means_male["75%",] ,col=1,lwd=2)
+points(range_years-.1,thetas_means_male["50%",],col=1,pch=16)
+# for (y in 1:32){
+#   for (i in 1:nrow(thetas_medians_ind[,,1])){
+# #    points(1985+y, thetas_medians_ind[i,y,1],col=1,pch=3)
+#   }
+# }
+
+y <- thetas_means_male["50%",]
+x <- range_years
+mod1=loess(y~x,span=0.5)
+xfit=seq(from=min(x),to=max(x),length.out=30)
+yfit1=predict(mod1,newdata=xfit)
+points(xfit,yfit1,type="l",lwd=2,col=1)
+
+
+segments(range_years-.1,thetas_means_female["2.5%",], range_years-.1,thetas_means_female["97.5%",] ,col=2)
+segments(range_years-.1,thetas_means_female["25%",], range_years-.1,thetas_means_female["75%",] ,col=2,lwd=2)
+points(range_years-.1,thetas_means_female["50%",],col=2,pch=16)
+for (y in 1:nyears){
+  for (i in 1:nrow(thetas_means_ind[,,2])){
+ #   points(1985+y, thetas_medians_ind[i,y,2],col=2,pch=3)
+  }
+}
+
+y <- thetas_means_female["50%",]
+x <- range_years
+mod1=loess(y~x,span=0.5)
+xfit=seq(from=min(x),to=max(x),length.out=30)
+yfit1=predict(mod1,newdata=xfit)
+points(xfit,yfit1,type="l",lwd=2,col=2)
+
+legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
+
+
+
+```
+
+### Allele Frequency
+```{r}
+
+#### ALLELE FREQUENCIES
+#load("data/data_vgll3.rdata")
+#years<-sort(unique(df$t))
+#nyears<-length(years)
+par(mfcol=c(1,1))
+tmp <- aggregate(X~g+sex+year, FUN=length)
+n <- xtabs( X ~ g+sex+year, tmp) # convert dataframe to matrix
+## Frequence of allele E
+p=q=array(,dim=c(2,nyears))
+for (s in 1:2){    # sex
+  for (t in 1:nyears){
+    p[s,t] <- sum((2*n[1,s,t])+(1*n[2,s,t])+(0*n[3,s,t]))/(2*sum(n[1:3,s,t])) # population frequence allelic for E
+    q[s,t] <- 1 - p[s,t]
+  }}
+colnames(p)<-years;rownames(p)<-c("Male","Female")
+
+## Load proportion of males by age at sea (1SW vs MSW, and by year)
+load("data/p_male_Scorff.Rdata")
+p_male_1SW <- mean(p_male_1SW[,"50%"])
+p_female_1SW <- 1-p_male_1SW
+p_male_MSW <- mean(p_male_MSW[,"50%"])
+p_female_MSW <- 1-p_male_MSW
+
+
+# loading coda
+#load(paste('results/Results_',stade,"_",year,'.RData',sep=""))
+#fit.mcmc <- as.mcmc(fit$sims.matrix) # using bugs
+#n1SW <- as.matrix(fit.mcmc[,paste0("n_1SW[",1:data$Y,"]")])
+#ntot <- as.matrix(fit.mcmc[,paste0("n_tot[",1:data$Y,"]")])
+p_1SW <- 0.86 #median(n1SW/ntot)
+
+P <- array(,dim=c(2,nyears))
+P[1,] <- q[1,]*p_1SW*p_male_1SW + q[1,]*(1-p_1SW)*p_male_MSW
+P[2,] <- q[2,]*p_1SW*p_female_1SW + q[2,]*(1-p_1SW)*p_female_MSW
+
+col.sex=c(1,2)
+par(mfcol=c(1,1))
+plot(NULL,xlim=c(min(years),max(years)),ylim=c(0,.3),xlab="",ylab="Allele L frequencies")
+for (s in 1:2){
+  y <- P[s,][-1]
+  x <- sort(years)[-1]
+  mod1=loess(y~x,span=0.9)
+  xfit=seq(from=min(x),to=max(x),length.out=nyears-1)
+  yfit1=predict(mod1,newdata=xfit)
+  points(xfit,yfit1,type="l",lwd=2,col=col.sex[s])
+  points(years,P[s,],col=col.sex[s],pch=16)
+}
+legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele L frequencies")
+
+
+
+
+par(mfcol=c(1,1))
+plot(P[1,1:nyears],thetas_means_male["50%",], xlim=c(0, .3), ylim=c(-3.5,2), pch="",main="", xlab="Allele L frequencies",ylab="Thresholds")
+points(P[1,1:nyears],thetas_means_male["50%",], pch="")
+text(P[1,1:nyears],thetas_means_male["50%",],min(data$year):max(data$year),cex=0.75)
+# Compute correlation
+cor_result <- cor.test(P[1,1:nyears],thetas_means_male["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_male["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="black") 
+
+#plot(P[2,1:nyears],thetas_means_female["50%",], xlim=c(0, .3), ylim=c(-3,2), pch="", main="Female", xlab="Freq allele L",ylab="Thresholds")
+points(P[2,1:nyears],thetas_means_female["50%",], pch="")
+text(P[2,1:nyears],thetas_means_female["50%",],min(data$year):max(data$year),cex=0.75,col="tomato")
+# Compute correlation
+cor_result <- cor.test(P[2,1:nyears],thetas_means_female["50%",])
+# Extract correlation estimate (r) and p-value
+cor_value <- round(cor_result$estimate, 3)
+p_value <- signif(cor_result$p.value, 3)
+# Add correlation text to the plot (top-left corner)
+text(x=0, 
+     y=max(thetas_means_female["50%",])*0.95, 
+     labels=paste0("r = ", cor_value, "\np = ", p_value), 
+     pos=4, col="tomato") 
+legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
+
+
+```
+
