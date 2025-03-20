@@ -28,6 +28,23 @@ t_col <- function(color, percent = 50, name = NULL) {
   invisible(t.col)
 }
 
+# Adds a highest density ellipse to an existing plot
+# xy: A matrix or data frame with two columns.
+#     If you have to variables just cbind(x, y) them.
+# coverage: The percentage of points the ellipse should cover
+# border: The color of the border of the ellipse, NA = no border
+# fill: The filling color of the ellipse, NA = no fill
+# ... : Passed on to the polygon() function
+add_hd_ellipse <- function(xy, coverage, border = "blue", fill = NA, ...) {
+  library(MASS)
+  library(cluster)
+  fit <- cov.mve(xy, quantile.used = round(nrow(xy) * coverage))
+  points_in_ellipse <- xy[fit$best, ]
+  ellipse_boundary <- predict(ellipsoidhull(points_in_ellipse))
+  polygon(ellipse_boundary, border=border, col = fill, ...)
+}
+
+
 format_ci <- function(values) {
   # Compute median
   med <- median(values) * 100
@@ -323,10 +340,67 @@ Our results show no significant differences in growth between males and females 
 
 **2. Genetic Variance:**
 
-We demonstrate a strong genetic influence on the decision to mature at one year, particularly in males. The genetic contribution to total variance is estimated at `r format_ci(h2[1])` in males and `r format_ci(h2[2])` in females. The VGLL3 gene contributes `r format_ci(1-ratio[,3])` to genetic variance, with this effect considered equal between sexes.
+We demonstrate a strong genetic influence on the decision to mature at one year, particularly in males. The genetic contribution to total variance is estimated at `r format_ci(h2[,1])` in males and `r format_ci(h2[,2])` in females. The VGLL3 gene contributes `r format_ci(1-ratio[,3])` to genetic variance, with this effect considered equal between sexes.
 
-```{r fig.height=4, fig.width=8}
-par(mfrow=c(1,3))
+```{r fig.height=8, fig.width=8}
+#par(mfrow=c(2,3))
+
+# Load required package
+require("NatParksPalettes")
+
+# Define the colors
+colors <- natparks.pals(name="Banff", n=4, type="discrete")
+
+# Set up the layout for two side-by-side plots
+par(mfrow = c(1, 5))  
+
+
+
+# Function to draw a variance contribution plot
+draw_plot <- function(title, genetic_total, vgll3_part, proximate_cue_part) {
+  
+  # Define contributions
+#genetic_total <- 0.8
+vgll3 <- vgll3_part * genetic_total  # VGLL3 is 20% of genetic
+other_genetic <- genetic_total - vgll3
+
+environmental_total <- 1- genetic_total
+proximate_cue <-proximate_cue_part * environmental_total  # Proximate Cue is 80% of environmental
+other_environmental <- environmental_total - proximate_cue
+
+  # Set up an empty plot
+  plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1), 
+       xlab = "", ylab = "", axes = FALSE, main = title)
+
+  # Draw rectangles using NatParksPalettes colors
+  rect(0, 0, 1, genetic_total, col = colors[1], border = "black")  # Genetic Contribution
+  rect(0, 0, 1, vgll3, col = colors[2], border = "black")  # VGLL3 inside Genetic
+  rect(0, genetic_total, 1, genetic_total + environmental_total, col = colors[3], border = "black")  # Environmental Contribution
+  rect(0, genetic_total, 1, genetic_total + proximate_cue, col = colors[4], border = "black")  # Proximate Cue inside Environmental
+
+  # Add Labels with contrasting colors
+  text(0.5, genetic_total / 2, paste0("Genetic ", format_ci(h2[,1])), cex = 1.2, col = "white")
+  text(0.5, vgll3 / 2, paste0("VGLL3 ", format_ci(1-ratio[,3])), cex = 1.0, col = "black")
+  text(0.5, genetic_total + environmental_total / 2, "Environmental (20%)", cex = 1.2, col = "white")
+  text(0.5, genetic_total + proximate_cue / 2, paste0("Proximate Cue ", format_ci(ratio[,1])), cex = 1.0, col = "black")
+  
+    # Add a segment to the right to mark the genetic-environmental boundary
+  segments(1.05, genetic_total, 1.15, genetic_total, lwd = 2, col = "black")  # Horizontal line
+  text(1.1, genetic_total + 0.05, "Genetic", srt = 90, adj = 0, cex = 1.2)
+  text(1.1, genetic_total - 0.05, "Environmental", srt = 90, adj = 1, cex = 1.2)
+}
+
+# Draw plots for males and females
+draw_plot("Male", median(h2[,1]),median(1-ratio[,3]),median(ratio[,1]))
+draw_plot("Female", median(h2[,2]), median(1-ratio[,4]),median(ratio[,2]))
+
+
+# Reset plot layout
+#par(mfrow = c(1,3))
+
+
+
+
 plot(NULL, xlim=c(0,3),ylim=c(0,1),xlab="", ylab="Contribution proximate cue to environmental variance",xaxt="n",main="Environment")
 #axis(1, at=c(1.5,3.5),labels=c("Envir", "Genetic"),las=2)
 axis(1, at=c(1,2),labels=c("Male", "Female"),las=2)
@@ -373,7 +447,7 @@ The genetic variance associated with VGLL3 and residual variance in females is v
 
 But the maturation threshold is significantly higher in females (`r format_ci2(mu_alphaFemale)`) than in males (`r format_ci2(mu_alphaMale)`), suggesting that females require more accumulated energy (via growth) to reach maturation.
 
-The genotypic values of VGLL3 are similar between sexes: `r format_ci2(a[1])` in males and `r format_ci2(a[2])` in females. However, males exhibit complete dominance of the E allele (k = `r format_ci2(k[,1])`), whereas females show only weak dominance (k = `r format_ci2(k[,2])`, p[k \< 0] = `r mean(k[,2]<0)`).
+The genotypic values of VGLL3 are similar between sexes: `r format_ci2(a[1])` in males and `r format_ci2(a[2])` in females. However, males exhibit complete dominance of the E allele (k = `r format_ci2(k[,1])`), whereas females show only weak dominance (k = `r format_ci2(k[,2])`, p[k \< 0] = `r mean(k[,2]<0)*100`%).
 
 ```{r fig.height=4, fig.width=8}
 #### GENETIC COMPONENTS
@@ -601,8 +675,7 @@ lines(X.obsc, p.obs[,3,2],lty=1,lwd=3,col=colors[3])
 
 ## 4. Temporal Trends:####
 
-Our results indicate a decline in the proximal signal over time, with a significant decrease after 2005. However, no clear temporal trend was observed for maturation thresholds in either sex. A slight but non-significant negative temporal correlation was observed between maturation thresholds and proximal signals, suggesting a plastic rather than genetic response.
-Additionally, we observed a slight decline in the frequency of the L allele over time, with a positive correlation with the maturation threshold in females only.
+Our results indicate a decline in the proximal signal over time, with a significant decrease after 2005. However, no clear temporal trend was observed for maturation thresholds in either sex. 
 
 
 ```{r fig.height=6, fig.width=8}
@@ -726,14 +799,15 @@ xfit=seq(from=min(x),to=max(x),length.out=30)
 yfit1=predict(mod1,newdata=xfit)
 points(xfit,yfit1,type="l",lwd=2,col=2)
 
-legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
-
-
+legend("topright",legend=c(male, female),text.col =c(1,"tomato"), bty="n")
 
 ```
 
 ### Allele Frequency
-```{r}
+
+The observed allele frequencies indicate a decreasing trend in the L allele for both males and females. However, a strong positive correlation between maturation thresholds and L allele frequencies across years is evident only in females.
+
+```{r echo=FALSE}
 
 #### ALLELE FREQUENCIES
 #load("data/data_vgll3.rdata")
@@ -782,8 +856,20 @@ for (s in 1:2){
   points(xfit,yfit1,type="l",lwd=2,col=col.sex[s])
   points(years,P[s,],col=col.sex[s],pch=16)
 }
-legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele L frequencies")
+#legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex, title ="Allele L frequencies")
+legend("topright",legend=c(male, female),text.col =c(1,"tomato"), bty="n")
 
+
+# # Create an index for columns (independent variable)
+# x <- 1:ncol(P)
+# 
+# # Fit linear regression model for each row
+# lm1 <- lm(P[1, ] ~ x)
+# lm2 <- lm(P[2, ] ~ x)
+# 
+# # Summarize the models
+# summary(lm1)  # Check p-value for significance
+# summary(lm2)
 
 
 
@@ -817,6 +903,107 @@ text(x=0,
      pos=4, col="tomato") 
 legend("topright",legend=c(male, female),text.col =c(1,2), bty="n")
 
+
+```
+
+
+
+## Correlation between proximal cue and maturation threshold
+
+
+A slight but non-significant negative temporal correlation was observed between maturation thresholds and proximal signals, suggesting a plastic rather than genetic response.
+
+```{r correlations}
+
+
+## pool theta samples between the three chains
+etas <- mcmc[,paste0("eta[",1:data$N,"]")]
+thetas <- mcmc[,paste0("theta[",1:data$N,"]")]
+
+etas.median <- apply(etas,2,median)
+thetas.median <- apply(thetas,2,median)
+
+#smp<-sample(1:dim(etas)[1],100,replace=FALSE)
+smp <- ceiling(seq(1000,nrow(etas),10))
+#smp.etas=smp.thetas=array(,dim=c(length(x),dim(etas)[2]))
+#for (i in 1:length(x)){
+smp.etas <- etas[smp,]
+smp.thetas <- thetas[smp,]
+#}
+
+
+#### CORRELATIONS
+cor.all=NULL
+cor<-array(,dim=c(dim(etas)[1],3,2))
+for (i in 1:dim(etas)[1]){
+  cor.all[i] <-cor.test(etas[i,],thetas[i,])$estimate
+  for (x in 1:2){
+  for (gen in 1:3){
+  tmp <- cbind(eta = etas[i,g==gen & sex==x],theta = thetas[i,g==gen & sex==x])
+  cor[i,gen,x]<-cor.test(tmp[,1],tmp[,2])$estimate
+  }}}
+
+
+col.sex=c(1,"tomato")
+
+par(mfrow=c(1,1))
+plot(NULL,xlim=c(0,5),ylim=c(-1,1),xlab="GENOTYPE",ylab="Correlation eta/theta", xaxt="n")
+#legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex)
+axis(1, line=1, at=1:4,labels=c("All","EE", "EL", "LL"),tick = FALSE,cex.axis=1.5)
+abline(h=0,lty=2)
+segments(1, quantile(cor.all,probs=0.025),1, quantile(cor.all,probs=0.975),col=1)
+segments(1, quantile(cor.all,probs=0.25),1, quantile(cor.all,probs=0.75),col=1,lwd=2)
+points(1,quantile(cor.all,probs=0.5), pch=21, col=1,bg="white")
+
+for (gen in (1:3)){
+segments(gen-0.1+1, apply(cor[,,1], 2, quantile, probs=0.025)[gen],gen-0.1+1, apply(cor[,,1], 2, quantile, probs=0.975)[gen],col=col.sex[1])
+segments(gen-0.1+1, apply(cor[,,1], 2, quantile, probs=0.25)[gen],gen-0.1+1, apply(cor[,,1], 2, quantile, probs=0.75)[gen],col=col.sex[1],lwd=2)
+points(gen-0.1+1,apply(cor[,,1], 2, quantile, probs=0.5)[gen], pch=21, col=col.sex[1],bg="white")
+
+segments(gen+0.1+1, apply(cor[,,2], 2, quantile, probs=0.025)[gen],gen+0.1+1, apply(cor[,,2], 2, quantile, probs=0.975)[gen],col=col.sex[2])
+segments(gen+0.1+1, apply(cor[,,2], 2, quantile, probs=0.25)[gen],gen+0.1+1, apply(cor[,,2], 2, quantile, probs=0.75)[gen],col=col.sex[2],lwd=2)
+points(gen+0.1+1,apply(cor[,,2], 2, quantile, probs=0.5)[gen], pch=21, col=col.sex[2],bg="white")
+}
+legend("topright",legend=c(male, female),text.col =c(1,"tomato"), bty="n")
+
+par(mfrow=c(1,1))
+
+
+
+
+# smp<-sample(1:dim(etas)[1],1,replace=FALSE)
+# 
+# smp.etas <- smp.thetas <- NULL
+# smp.etas <- etas[smp,]  
+# smp.thetas <- thetas[smp,] 
+# smp.cor <- cor[smp,]
+
+par(mfrow=c(2,2))
+for (x in 1:2){
+
+smp=sample(1000:nrow(etas),1,replace=FALSE)  
+plot(NULL,xlim=c(-10,10),ylim=c(-10,10),xlab="Proximate cue",ylab="Threshold", main=paste0("Male (iteration: ", smp,")"))
+#legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex)
+legend("topright", legend=c("EE", "EL", "LL"),pch=1:3, bty="n")
+for (gen in 1:3){
+  tmp <- cbind(eta = etas[smp,g==gen & sex==1],theta = thetas[smp,g==gen & sex==1])
+  add_hd_ellipse(tmp, coverage = 0.95, border=NA, fill = "#63636370", lwd=3)
+  points(etas[smp,g==gen & sex==1],thetas[smp,g==gen & sex==1], col=col.sex[1],pch=gen)
+  #points(etas[smp,g==gen & sex==2],thetas[smp,g==gen & sex==2], col=col.sex[2],pch=gen)
+}
+
+
+plot(NULL,xlim=c(-10,10),ylim=c(-10,10),xlab="Proximate cue",ylab="Threshold",  main=paste0("Female (iteration: ", smp,")"))
+smp=sample(1000:nrow(etas),1,replace=FALSE)
+#legend("topleft", legend=c("Male", "Female"),fill=col.sex, bty="n",border = col.sex)
+legend("topright", legend=c("EE", "EL", "LL"),pch=1:3, bty="n")
+for (gen in 1:3){
+  tmp <- cbind(eta = etas[smp,g==gen & sex==2],theta = thetas[smp,g==gen & sex==2])
+  add_hd_ellipse(tmp, coverage = 0.95, border=NA, fill = "#63636370", lwd=3)
+  points(etas[smp,g==gen & sex==2],thetas[smp,g==gen & sex==2], col=col.sex[2],pch=gen)
+  #points(etas[smp,g==gen & sex==2],thetas[smp,g==gen & sex==2], col=col.sex[2],pch=gen)
+}
+}
 
 ```
 
